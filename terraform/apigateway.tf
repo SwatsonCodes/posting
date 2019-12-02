@@ -27,8 +27,7 @@ resource "aws_api_gateway_integration" "very_nice_lambda" {
   http_method             = aws_api_gateway_method.base_get.http_method
   type                    = "AWS"
   integration_http_method = "POST"
-  # TODO: dont hardcode this
-  uri = "arn:aws:apigateway:us-east-2:lambda:path/2015-03-31/functions/arn:aws:lambda:us-east-2:772894032171:function:hello/invocations"
+  uri                     = aws_lambda_function.very_nice.invoke_arn
 }
 
 resource "aws_api_gateway_method_response" "base_get_200" {
