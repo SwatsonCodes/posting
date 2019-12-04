@@ -8,9 +8,9 @@ import (
 )
 
 const cowsay string = `
- _________
-< GO AWAY >
- ---------
+ __________
+< GO AWAY. >
+ ----------
         \   ^__^
          \  (oo)\_______
             (__)\       )\/\
@@ -23,6 +23,10 @@ func main() {
 		return events.APIGatewayProxyResponse{
 				StatusCode: http.StatusOK,
 				Body:       cowsay,
+				Headers: map[string]string{
+					"Content-Type":  "text/plain",
+					"Cache-Control": "no-cache",
+				},
 			},
 			nil
 	})
