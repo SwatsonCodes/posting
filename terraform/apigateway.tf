@@ -8,22 +8,16 @@ resource "aws_api_gateway_rest_api" "samsverynice" {
   }
 }
 
-resource "aws_api_gateway_resource" "base" {
-  rest_api_id = aws_api_gateway_rest_api.samsverynice.id
-  parent_id   = ""
-  path_part   = ""
-}
-
 resource "aws_api_gateway_method" "base_get" {
   rest_api_id   = aws_api_gateway_rest_api.samsverynice.id
-  resource_id   = aws_api_gateway_resource.base.id
+  resource_id   = aws_api_gateway_rest_api.samsverynice.root_resource_id
   http_method   = "GET"
   authorization = "NONE"
 }
 
-resource "aws_api_gateway_integration" "very_nice_lambda" {
+resource "aws_api_gateway_integration" "base_get_very_nice_lambda" {
   rest_api_id             = aws_api_gateway_rest_api.samsverynice.id
-  resource_id             = aws_api_gateway_resource.base.id
+  resource_id             = aws_api_gateway_rest_api.samsverynice.root_resource_id
   http_method             = aws_api_gateway_method.base_get.http_method
   type                    = "AWS_PROXY"
   integration_http_method = "POST"
@@ -32,7 +26,7 @@ resource "aws_api_gateway_integration" "very_nice_lambda" {
 
 resource "aws_api_gateway_method_response" "base_get_200" {
   rest_api_id = aws_api_gateway_rest_api.samsverynice.id
-  resource_id = aws_api_gateway_resource.base.id
+  resource_id = aws_api_gateway_rest_api.samsverynice.root_resource_id
   http_method = aws_api_gateway_method.base_get.http_method
   status_code = "200"
   response_models = {
@@ -41,7 +35,7 @@ resource "aws_api_gateway_method_response" "base_get_200" {
 }
 
 resource "aws_api_gateway_deployment" "prod" {
-  depends_on  = [aws_api_gateway_integration.very_nice_lambda]
+  depends_on  = [aws_api_gateway_integration.base_get_very_nice_lambda]
   rest_api_id = aws_api_gateway_rest_api.samsverynice.id
   stage_name  = "prod"
 }
