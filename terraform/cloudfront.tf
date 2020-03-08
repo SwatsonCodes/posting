@@ -32,6 +32,9 @@ resource "aws_cloudfront_distribution" "verynice" {
     allowed_methods        = ["GET", "HEAD"]
     cached_methods         = ["GET", "HEAD"]
     viewer_protocol_policy = "redirect-to-https"
+    min_ttl                = 0
+    max_ttl                = 0
+    default_ttl            = 0
     forwarded_values {
       query_string = false
       cookies {
