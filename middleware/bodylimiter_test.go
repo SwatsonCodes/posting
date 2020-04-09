@@ -26,20 +26,20 @@ func TestBodyLimiterMiddleware(t *testing.T) {
 		maxBodySizeBytes int64
 		statusCode       int
 	}{
-		{"GET", 1, 1, 8, 200},
-		{"PUT", 1, 1, 8, 200},
-		{"POST", 1, 1, 8, 200},
-		{"GET", 20, 20, 8, 400},
-		{"PUT", 20, 20, 8, 400},
-		{"POST", 20, 20, 8, 400},
-		{"POST", 8, 8, 8, 200},
-		{"POST", 0, 0, 0, 200},
-		{"POST", 1, 1, 0, 400},
-		{"POST", 0, 0, -1, 400},
-		{"POST", 20, 8, 10, 200},
-		{"POST", 20, 0, 10, 200},
-		{"POST", 20, 30, 10, 400},
-		{"POST", 20, 10, 10, 200},
+		{http.MethodGet, 1, 1, 8, http.StatusOK},
+		{http.MethodPut, 1, 1, 8, http.StatusOK},
+		{http.MethodPost, 1, 1, 8, http.StatusOK},
+		{http.MethodGet, 20, 20, 8, http.StatusBadRequest},
+		{http.MethodPut, 20, 20, 8, http.StatusBadRequest},
+		{http.MethodPost, 20, 20, 8, http.StatusBadRequest},
+		{http.MethodPost, 8, 8, 8, http.StatusOK},
+		{http.MethodPost, 0, 0, 0, http.StatusOK},
+		{http.MethodPost, 1, 1, 0, http.StatusBadRequest},
+		{http.MethodPost, 0, 0, -1, http.StatusBadRequest},
+		{http.MethodPost, 20, 8, 10, http.StatusOK},
+		{http.MethodPost, 20, 0, 10, http.StatusOK},
+		{http.MethodPost, 20, 30, 10, http.StatusBadRequest},
+		{http.MethodPost, 20, 10, 10, http.StatusOK},
 	}
 
 	for _, testcase := range testcases {
@@ -48,10 +48,9 @@ func TestBodyLimiterMiddleware(t *testing.T) {
 			t.Fatal(err)
 		}
 		req.ContentLength = testcase.contentLength
-
 		recorder := httptest.NewRecorder()
 		bytesCounter := bytesReadCounter{}
-		middleware := BodyLimiter{testcase.maxBodySizeBytes}.Middleware(http.HandlerFunc(bytesCounter.ReaderHandler))
+		middleware := bodyLimiter{testcase.maxBodySizeBytes}.Middleware(http.HandlerFunc(bytesCounter.ReaderHandler))
 		middleware.ServeHTTP(recorder, req)
 
 		if status := recorder.Code; status != testcase.statusCode {
@@ -59,7 +58,7 @@ func TestBodyLimiterMiddleware(t *testing.T) {
 				status, testcase.statusCode)
 		}
 
-		if testcase.statusCode == 400 {
+		if testcase.statusCode == http.StatusBadRequest {
 			expectedResponse := fmt.Sprintf("request body exceeds %d bytes\n", testcase.maxBodySizeBytes)
 			if recorder.Body.String() != expectedResponse {
 				t.Errorf("handler returned unexpected body: got '%s' but expected '%s'",
