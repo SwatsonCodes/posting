@@ -9,24 +9,22 @@ import (
 type yesAuthorizer struct{}
 type unAuthorizer struct{}
 
-func (checker yesAuthorizer) IsRequestAuthorized(r *http.Request) bool {
+func authorizeRequest(r *http.Request) bool {
 	return true
 }
 
-func (checker unAuthorizer) IsRequestAuthorized(r *http.Request) bool {
+func unauthorizeRequest(r *http.Request) bool {
 	return false
 }
 
 func TestAuthCheckerMiddleware(t *testing.T) {
-	accepter := authChecker{yesAuthorizer{}}
-	refuser := authChecker{unAuthorizer{}}
 
 	testcases := []struct {
-		authorizer authChecker
+		authorizer func(*http.Request) bool
 		statusCode int
 	}{
-		{accepter, http.StatusOK},
-		{refuser, http.StatusUnauthorized},
+		{authorizeRequest, http.StatusOK},
+		{unauthorizeRequest, http.StatusUnauthorized},
 	}
 
 	for _, testcase := range testcases {
@@ -35,7 +33,7 @@ func TestAuthCheckerMiddleware(t *testing.T) {
 			t.Fatal(err)
 		}
 		recorder := httptest.NewRecorder()
-		middleware := testcase.authorizer.Middleware(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+		middleware := CheckAuth(testcase.authorizer, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 		middleware.ServeHTTP(recorder, req)
 
 		if status := recorder.Code; status != testcase.statusCode {
