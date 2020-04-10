@@ -34,11 +34,6 @@ type niceApp struct {
 	MaxRequestBodySizeBytes int64
 }
 
-func init() {
-	log.SetFormatter(&log.JSONFormatter{})
-	log.Info("cold start")
-}
-
 func goAway(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, cowsay)
 }
@@ -52,6 +47,7 @@ func (app niceApp) postsHandler(w http.ResponseWriter, r *http.Request) {
 	for k, v := range r.PostForm {
 		log.Infof("%s: %s", k, v[0])
 	}
+	w.WriteHeader(http.StatusCreated)
 }
 
 func (app niceApp) isRequestAuthorized(r *http.Request) bool {
@@ -65,10 +61,8 @@ func (app niceApp) isRequestAuthorized(r *http.Request) bool {
 			log.Infof("accountID: %s, sender: %s", accountID, sender)
 			return accountID[0] == app.TwilioAccountID && sender[0] == app.AllowedSender
 		}
-		log.Info(" no Frm")
 		return false
 	}
-	log.Info(" no accountSid")
 	return false
 }
 
@@ -105,10 +99,9 @@ func isRunningInLambda() bool {
 }
 
 func main() {
-	if adapter == nil || router == nil {
-		log.Info("initializing router")
-		initRouter()
-	}
+	log.SetFormatter(&log.JSONFormatter{})
+	log.Info("hello")
+	initRouter()
 	if isRunningInLambda() {
 		lambda.Start(func(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 			return adapter.Proxy(req)
