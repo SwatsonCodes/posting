@@ -66,8 +66,8 @@ resource "aws_api_gateway_method_response" "proxy_any_200" {
   }
 }
 
-resource "aws_api_gateway_deployment" "prod" {
+resource "aws_api_gateway_deployment" "production" {
   depends_on  = [aws_api_gateway_integration.base_get_very_nice_lambda]
   rest_api_id = aws_api_gateway_rest_api.samsverynice.id
-  stage_name  = "prod"
+  stage_name  = "production"
 }

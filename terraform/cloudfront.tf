@@ -11,7 +11,7 @@ resource "aws_cloudfront_distribution" "verynice" {
   origin {
     origin_id   = "apigatewaysamsverynice"
     domain_name = "${aws_api_gateway_rest_api.samsverynice.id}.execute-api.${data.aws_region.current.name}.amazonaws.com"
-    origin_path = "/${aws_api_gateway_deployment.prod.stage_name}"
+    origin_path = "/${aws_api_gateway_deployment.production.stage_name}"
 
     custom_origin_config {
       http_port                = 80
@@ -29,7 +29,7 @@ resource "aws_cloudfront_distribution" "verynice" {
 
   default_cache_behavior {
     target_origin_id       = "apigatewaysamsverynice"
-    allowed_methods        = ["GET", "HEAD"]
+    allowed_methods        = ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
     cached_methods         = ["GET", "HEAD"]
     viewer_protocol_policy = "redirect-to-https"
     min_ttl                = 0

@@ -7,6 +7,14 @@ resource "aws_lambda_function" "very_nice" {
   memory_size   = 128
   timeout       = 2
   publish       = "true"
+
+  environment {
+    variables = {
+      ALLOWED_SENDER              = "+14062611340",
+      TWILIO_ACCOUNT_ID           = "AC7d079fdfd5ee9479aa157cb85da14497",
+      MAX_REQUEST_BODY_SIZE_BYTES = "32768",
+    }
+  }
 }
 
 data "aws_iam_policy_document" "lambda_assume_role_policy" {
