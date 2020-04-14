@@ -1,2 +1,4 @@
 */.terraform/*
 */terraform.*
+main
+nice_lambda.zip
