@@ -34,7 +34,7 @@ type niceApp struct {
 	MaxRequestBodySizeBytes int64
 }
 
-func goAway(w http.ResponseWriter, r *http.Request) {
+func goAwayHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, cowsay)
 }
 
@@ -58,7 +58,6 @@ func (app niceApp) isRequestAuthorized(r *http.Request) bool {
 	}
 	if accountID, aOK := (r.PostForm)["AccountSid"]; aOK {
 		if sender, sOK := (r.PostForm)["From"]; sOK {
-			log.Infof("accountID: %s, sender: %s", accountID, sender)
 			return accountID[0] == app.TwilioAccountID && sender[0] == app.AllowedSender
 		}
 		return false
@@ -88,7 +87,7 @@ func initRouter() {
 		MaxRequestBodySizeBytes: max,
 	}
 	router = mux.NewRouter()
-	router.HandleFunc("/", goAway).Methods(http.MethodGet)
+	router.HandleFunc("/", goAwayHandler).Methods(http.MethodGet)
 	router.Handle("/posts", middleware.LimitRequestBody(max, middleware.CheckAuth(app.isRequestAuthorized, http.HandlerFunc(app.postsHandler)))).Methods(http.MethodPost)
 	adapter = gorillamux.New(router)
 }
@@ -99,7 +98,7 @@ func isRunningInLambda() bool {
 }
 
 func main() {
-	log.SetFormatter(&log.JSONFormatter{})
+	log.SetFormatter(&log.JSONFormatter{DisableHTMLEscape: true})
 	log.Info("hello")
 	initRouter()
 	if isRunningInLambda() {
@@ -107,7 +106,7 @@ func main() {
 			return adapter.Proxy(req)
 		})
 	} else {
-		log.Info("serving on port 8000")
-		http.ListenAndServe(":8000", router)
+		log.Info("serving on port 8008")
+		http.ListenAndServe(":8008", router)
 	}
 }

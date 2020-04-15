@@ -13,3 +13,7 @@ docker-dynamo-local: docker-dynamo-run docker-dynamo-init
 .PHONY: docker-dynamo-kill
 docker-dynamo-kill:
 	docker kill dynamo_nice
+
+.PHONY: run-local
+run-local:
+	export `cat dev_vars.env | xargs` && go run main.go
