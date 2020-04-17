@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"github.com/swatsoncodes/very-nice-website/middleware"
+	"github.com/swatsoncodes/very-nice-website/models"
 )
 
 const cowsay string = `
@@ -43,7 +44,15 @@ func (app niceApp) postsHandler(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.WithError(err).Error("failed to parse form body")
 		http.Error(w, "unable to parse request form body", http.StatusBadRequest)
+		return
 	}
+	_, err = models.ParsePost(&r.PostForm)
+	if err != nil {
+		log.WithError(err).Warn("got bad post")
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	for k, v := range r.PostForm {
 		log.Infof("%s: %s", k, v[0])
 	}
