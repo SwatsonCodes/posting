@@ -1,0 +1,56 @@
+package db
+
+import (
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbattribute"
+	"github.com/aws/aws-sdk-go/service/dynamodb/dynamodbiface"
+	"github.com/swatsoncodes/very-nice-website/models"
+)
+
+type Dynamo struct {
+	Table string
+	svc   *dynamodbiface.DynamoDBAPI
+}
+
+func New(table string, endpoint *string) (*Dynamo, error) {
+	sess, err := session.NewSession()
+	if err != nil {
+		return nil, err
+	}
+	config := aws.Config{Endpoint: endpoint}
+	var svc dynamodbiface.DynamoDBAPI = dynamodb.New(sess, &config)
+	return &Dynamo{table, &svc}, nil
+}
+
+func (dynamo *Dynamo) putPost(post models.Post) (err error) {
+	item, err := dynamodbattribute.MarshalMap(post)
+	if err != nil {
+		return
+	}
+
+	_, err = (*dynamo.svc).PutItem(&dynamodb.PutItemInput{
+		TableName: &dynamo.Table,
+		Item:      item,
+	})
+	return
+}
+
+func (dynamo *Dynamo) getPosts() (*[]models.Post, error) {
+	// TODO: pagination stuff
+	result, err := (*dynamo.svc).Scan(&dynamodb.ScanInput{TableName: &dynamo.Table})
+	if err != nil {
+		return nil, err
+	}
+	if *result.Count <= 0 {
+		return nil, err
+	}
+
+	posts := make([]models.Post, *result.Count)
+	err = dynamodbattribute.UnmarshalListOfMaps(result.Items, &posts)
+	if err != nil {
+		return nil, err
+	}
+	return &posts, nil
+}
