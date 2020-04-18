@@ -10,14 +10,14 @@ import (
 
 func TestPutPost(t *testing.T) {
 	var md dynamodbiface.DynamoDBAPI = mockDynamo{}
-	mockamo := Dynamo{"mock", &md}
-	assert.NoError(t, mockamo.putPost(models.Post{}), "got unexpected error")
+	mockamo := dynamo{"mock", &md}
+	assert.NoError(t, mockamo.PutPost(models.Post{}), "got unexpected error")
 }
 
 func TestGetPosts(t *testing.T) {
 	var md dynamodbiface.DynamoDBAPI = mockDynamo{}
-	mockamo := Dynamo{"mock", &md}
-	posts, err := mockamo.getPosts()
+	mockamo := dynamo{"mock", &md}
+	posts, err := mockamo.GetPosts()
 	assert.NoError(t, err, "got unexpected error")
 	assert.NotNil(t, posts, "expected some posts, but got nil")
 }

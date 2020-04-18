@@ -6,7 +6,7 @@ import (
 )
 
 func TestIsPosterAuthorized(t *testing.T) {
-	app := niceApp{
+	poster := Poster{
 		TwilioAccountID: "abc123",
 		AllowedSender:   "+15558675309",
 	}
@@ -17,15 +17,15 @@ func TestIsPosterAuthorized(t *testing.T) {
 		authorized bool
 	}{
 		{&map[string][]string{
-			"AccountSid": []string{app.TwilioAccountID},
-			"From":       []string{app.AllowedSender},
+			"AccountSid": []string{poster.TwilioAccountID},
+			"From":       []string{poster.AllowedSender},
 		}, true},
 		{&map[string][]string{
 			"AccountSid": []string{"bad"},
-			"From":       []string{app.AllowedSender},
+			"From":       []string{poster.AllowedSender},
 		}, false},
 		{&map[string][]string{
-			"AccountSid": []string{app.TwilioAccountID},
+			"AccountSid": []string{poster.TwilioAccountID},
 			"From":       []string{"bad"},
 		}, false},
 		{&map[string][]string{
@@ -33,13 +33,13 @@ func TestIsPosterAuthorized(t *testing.T) {
 			"From":       []string{"bad"},
 		}, false},
 		{&map[string][]string{
-			"From": []string{app.AllowedSender},
+			"From": []string{poster.AllowedSender},
 		}, false},
 		{&map[string][]string{
-			"AccountSid": []string{app.TwilioAccountID},
+			"AccountSid": []string{poster.TwilioAccountID},
 		}, false},
 		{&map[string][]string{
-			"AccountSid": []string{app.TwilioAccountID},
+			"AccountSid": []string{poster.TwilioAccountID},
 		}, false},
 	}
 
@@ -49,7 +49,7 @@ func TestIsPosterAuthorized(t *testing.T) {
 			t.Fatal(err)
 		}
 		req.PostForm = *testcase.postForm
-		isAuthorized := app.isRequestAuthorized(req)
+		isAuthorized := poster.IsRequestAuthorized(req)
 		if isAuthorized != testcase.authorized {
 			t.Errorf("expected '%v' but got '%v'", testcase.authorized, isAuthorized)
 		}

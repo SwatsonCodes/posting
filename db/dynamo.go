@@ -9,22 +9,22 @@ import (
 	"github.com/swatsoncodes/very-nice-website/models"
 )
 
-type Dynamo struct {
+type dynamo struct {
 	Table string
 	svc   *dynamodbiface.DynamoDBAPI
 }
 
-func New(table string, endpoint *string) (*Dynamo, error) {
+func New(table string, endpoint *string) (*dynamo, error) {
 	sess, err := session.NewSession()
 	if err != nil {
 		return nil, err
 	}
 	config := aws.Config{Endpoint: endpoint}
 	var svc dynamodbiface.DynamoDBAPI = dynamodb.New(sess, &config)
-	return &Dynamo{table, &svc}, nil
+	return &dynamo{table, &svc}, nil
 }
 
-func (dynamo *Dynamo) putPost(post models.Post) (err error) {
+func (dynamo dynamo) PutPost(post models.Post) (err error) {
 	item, err := dynamodbattribute.MarshalMap(post)
 	if err != nil {
 		return
@@ -37,7 +37,7 @@ func (dynamo *Dynamo) putPost(post models.Post) (err error) {
 	return
 }
 
-func (dynamo *Dynamo) getPosts() (*[]models.Post, error) {
+func (dynamo dynamo) GetPosts() (*[]models.Post, error) {
 	// TODO: pagination stuff
 	result, err := (*dynamo.svc).Scan(&dynamodb.ScanInput{TableName: &dynamo.Table})
 	if err != nil {

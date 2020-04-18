@@ -11,6 +11,7 @@ type Post struct {
 	ID        string
 	Body      string
 	MediaURLs *[]string
+	// TODO: add timestamp
 }
 
 func ParsePost(form *url.Values) (post *Post, err error) {

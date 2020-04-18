@@ -5,7 +5,7 @@ docker-dynamo-run:
 
 .PHONY: docker-dynamo-init
 docker-dynamo-init:
-	./create_posts_table_local.sh
+	./db/create_dynamo_posts_table_local.sh
 
 .PHONY: docker-dynamo-local
 docker-dynamo-local: docker-dynamo-run docker-dynamo-init

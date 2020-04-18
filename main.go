@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"strconv"
@@ -12,69 +11,19 @@ import (
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"github.com/swatsoncodes/very-nice-website/middleware"
-	"github.com/swatsoncodes/very-nice-website/models"
 )
 
-const cowsay string = `
- ____________
-< GO AWAY <3 >
- ------------
-        \   ^__^
-         \  (oo)\_______
-            (__)\       )\/\
-                ||----w |
-                ||     ||
-`
 const defaultMaxRequestBodySizeBytes int64 = 32 * 1024 // 32KiB
-var adapter *gorillamux.GorillaMuxAdapter
-var router *mux.Router
 
-type niceApp struct {
-	AllowedSender           string
-	TwilioAccountID         string
-	MaxRequestBodySizeBytes int64
+func isRunningInLambda() bool {
+	_, inLambda := os.LookupEnv("LAMBDA_TASK_ROOT")
+	return inLambda
 }
 
-func goAwayHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, cowsay)
-}
+func main() {
+	log.SetFormatter(&log.JSONFormatter{DisableHTMLEscape: true})
+	log.Info("hello")
 
-func (app niceApp) postsHandler(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
-	if err != nil {
-		log.WithError(err).Error("failed to parse form body")
-		http.Error(w, "unable to parse request form body", http.StatusBadRequest)
-		return
-	}
-	_, err = models.ParsePost(&r.PostForm)
-	if err != nil {
-		log.WithError(err).Warn("got bad post")
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	for k, v := range r.PostForm {
-		log.Infof("%s: %s", k, v[0])
-	}
-	w.WriteHeader(http.StatusCreated)
-}
-
-func (app niceApp) isRequestAuthorized(r *http.Request) bool {
-	err := r.ParseForm()
-	if err != nil {
-		log.WithError(err).Error("failed to parse form body")
-		return false
-	}
-	if accountID, aOK := (r.PostForm)["AccountSid"]; aOK {
-		if sender, sOK := (r.PostForm)["From"]; sOK {
-			return accountID[0] == app.TwilioAccountID && sender[0] == app.AllowedSender
-		}
-		return false
-	}
-	return false
-}
-
-func initRouter() {
 	sender, ok := os.LookupEnv("ALLOWED_SENDER")
 	if !ok {
 		log.Fatal("env var ALLOWED_SENDER not set")
@@ -90,26 +39,19 @@ func initRouter() {
 		max = defaultMaxRequestBodySizeBytes
 	}
 
-	app := niceApp{
+	poster := Poster{
 		AllowedSender:           sender,
 		TwilioAccountID:         accountID,
 		MaxRequestBodySizeBytes: max,
 	}
-	router = mux.NewRouter()
-	router.HandleFunc("/", goAwayHandler).Methods(http.MethodGet)
-	router.Handle("/posts", middleware.LimitRequestBody(max, middleware.CheckAuth(app.isRequestAuthorized, http.HandlerFunc(app.postsHandler)))).Methods(http.MethodPost)
-	adapter = gorillamux.New(router)
-}
+	router := mux.NewRouter()
+	router.HandleFunc("/", GoAway).Methods(http.MethodGet)
+	router.Handle("/posts",
+		middleware.LimitRequestBody(max, middleware.CheckAuth(
+			poster.IsRequestAuthorized, http.HandlerFunc(poster.CreatePost)))).
+		Methods(http.MethodPost)
+	adapter := gorillamux.New(router)
 
-func isRunningInLambda() bool {
-	_, inLambda := os.LookupEnv("LAMBDA_TASK_ROOT")
-	return inLambda
-}
-
-func main() {
-	log.SetFormatter(&log.JSONFormatter{DisableHTMLEscape: true})
-	log.Info("hello")
-	initRouter()
 	if isRunningInLambda() {
 		lambda.Start(func(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 			return adapter.Proxy(req)
