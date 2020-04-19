@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -34,7 +35,7 @@ func GoAway(w http.ResponseWriter, r *http.Request) {
 func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
-		log.WithError(err).Error("failed to parse form body")
+		log.WithError(err).Warn("failed to parse form body")
 		http.Error(w, "unable to parse request form body", http.StatusBadRequest)
 		return
 	}
@@ -53,6 +54,26 @@ func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusCreated)
+}
+
+func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
+	posts, err := poster.DB.GetPosts()
+	if err != nil {
+		log.WithError(err).Error("failed to get posts from db")
+		http.Error(w, "unable to retrieve posts", http.StatusInternalServerError)
+		return
+	}
+
+	resp, err := json.Marshal(*posts)
+	if err != nil {
+		log.WithError(err).Error("failed to marshal posts to json")
+		http.Error(w, "unable to retrieve posts", http.StatusInternalServerError)
+		return
+	}
+
+	// TODO: don't just serve raw json as response
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(resp)
 }
 
 func (poster Poster) IsRequestAuthorized(r *http.Request) bool {

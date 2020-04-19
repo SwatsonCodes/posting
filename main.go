@@ -49,7 +49,8 @@ func main() {
 	router.Handle("/posts",
 		middleware.LimitRequestBody(max, middleware.CheckAuth(
 			poster.IsRequestAuthorized, http.HandlerFunc(poster.CreatePost)))).
-		Methods(http.MethodPost)
+		Methods(http.MethodPost).
+		Headers("Content-Type", "application/x-www-form-urlencoded")
 	adapter := gorillamux.New(router)
 
 	if isRunningInLambda() {

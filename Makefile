@@ -16,4 +16,4 @@ docker-dynamo-kill:
 
 .PHONY: run-local
 run-local:
-	export `cat dev_vars.env | xargs` && go run main.go
+	export `cat dev_vars.env | xargs` && go run .
