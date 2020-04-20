@@ -28,10 +28,9 @@ const cowsay string = `
 `
 
 type Poster struct {
-	AllowedSender           string
-	TwilioAuthToken         string
-	MaxRequestBodySizeBytes int64
-	DB                      db.PostsDB
+	AllowedSender   string
+	TwilioAuthToken string
+	DB              db.PostsDB
 }
 
 func GoAway(w http.ResponseWriter, r *http.Request) {

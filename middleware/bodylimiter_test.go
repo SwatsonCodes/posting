@@ -23,7 +23,7 @@ func TestBodyLimiterMiddleware(t *testing.T) {
 		method           string
 		bodySizeBytes    int
 		contentLength    int64
-		maxBodySizeBytes int64
+		maxBodySizeBytes RequestBodyLimitBytes
 		statusCode       int
 	}{
 		{http.MethodGet, 1, 1, 8, http.StatusOK},
@@ -50,7 +50,7 @@ func TestBodyLimiterMiddleware(t *testing.T) {
 		req.ContentLength = testcase.contentLength
 		recorder := httptest.NewRecorder()
 		bytesCounter := bytesReadCounter{}
-		middleware := LimitRequestBody(testcase.maxBodySizeBytes, http.HandlerFunc(bytesCounter.ReaderHandler))
+		middleware := testcase.maxBodySizeBytes.LimitRequestBody(http.HandlerFunc(bytesCounter.ReaderHandler))
 		middleware.ServeHTTP(recorder, req)
 
 		if status := recorder.Code; status != testcase.statusCode {

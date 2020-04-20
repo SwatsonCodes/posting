@@ -15,8 +15,8 @@ import (
 	"github.com/swatsoncodes/very-nice-website/middleware"
 )
 
-const defaultMaxRequestBodySizeBytes int64 = 32 * 1024 // 32KiB
-const tableName = "posts"                              // TODO: make this configurable
+const defaultBodyLimit middleware.RequestBodyLimitBytes = 32 * 1024 // 32KiB
+const tableName = "posts"                                           // TODO: make this configurable
 
 func isRunningInLambda() bool {
 	_, inLambda := os.LookupEnv("LAMBDA_TASK_ROOT")
@@ -26,6 +26,7 @@ func isRunningInLambda() bool {
 func main() {
 	var dynamoEndpoint *string
 	var sender, twilioToken string
+	var requestBodyLimit middleware.RequestBodyLimitBytes
 	var ok bool
 	log.SetFormatter(&log.JSONFormatter{DisableHTMLEscape: true})
 	log.Info("hello")
@@ -41,10 +42,11 @@ func main() {
 		log.Infof("using custom DynamoDB endpoint: '%s'", de)
 	}
 	maxBody := os.Getenv("MAX_REQUEST_BODY_SIZE_BYTES")
-	max, err := strconv.ParseInt(maxBody, 10, 0)
-	if err != nil {
-		log.Warnf("env var MAX_REQUEST_BODY_SIZE_BYTES not set or invalid. using default value of %d", defaultMaxRequestBodySizeBytes)
-		max = defaultMaxRequestBodySizeBytes
+	if max, err := strconv.ParseInt(maxBody, 10, 0); err != nil {
+		log.Warnf("env var MAX_REQUEST_BODY_SIZE_BYTES not set or invalid. using default value of %d", defaultBodyLimit)
+		requestBodyLimit = defaultBodyLimit
+	} else {
+		requestBodyLimit = middleware.RequestBodyLimitBytes(max)
 	}
 
 	db, err := db.New(tableName, dynamoEndpoint)
@@ -52,17 +54,17 @@ func main() {
 		log.WithError(err).Fatal("failed to initialize db")
 	}
 	poster := Poster{
-		AllowedSender:           sender,
-		TwilioAuthToken:         twilioToken,
-		MaxRequestBodySizeBytes: max,
-		DB:                      db,
+		AllowedSender:   sender,
+		TwilioAuthToken: twilioToken,
+		DB:              db,
 	}
 	router := mux.NewRouter()
 
 	router.HandleFunc("/", GoAway).Methods(http.MethodGet)
 	router.Handle("/posts",
-		middleware.LimitRequestBody(max, middleware.CheckAuth(
-			poster.IsRequestAuthorized, http.HandlerFunc(poster.CreatePost)))).
+		requestBodyLimit.LimitRequestBody( // guard against giant posts
+			middleware.AuthChecker(poster.IsRequestAuthorized).CheckAuth( // make sure posters are authorized
+				http.HandlerFunc(poster.CreatePost)))).
 		Methods(http.MethodPost).
 		Headers("Content-Type", "application/x-www-form-urlencoded")
 	router.HandleFunc("/posts", poster.GetPosts).Methods(http.MethodGet)

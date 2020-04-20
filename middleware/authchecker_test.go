@@ -20,7 +20,7 @@ func unauthorizeRequest(r *http.Request) bool {
 func TestAuthCheckerMiddleware(t *testing.T) {
 
 	testcases := []struct {
-		authorizer func(*http.Request) bool
+		authorizer AuthChecker
 		statusCode int
 	}{
 		{authorizeRequest, http.StatusOK},
@@ -33,7 +33,7 @@ func TestAuthCheckerMiddleware(t *testing.T) {
 			t.Fatal(err)
 		}
 		recorder := httptest.NewRecorder()
-		middleware := CheckAuth(testcase.authorizer, http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+		middleware := testcase.authorizer.CheckAuth(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 		middleware.ServeHTTP(recorder, req)
 
 		if status := recorder.Code; status != testcase.statusCode {
