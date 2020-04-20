@@ -136,7 +136,6 @@ func TestIsPosterAuthorized(t *testing.T) {
 		AllowedSender:   "+15558675309",
 	}
 
-	// TODO: add test case for mangled body
 	testcases := []struct {
 		postForm   *map[string][]string
 		authorized bool

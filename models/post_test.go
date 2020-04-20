@@ -3,6 +3,7 @@ package models
 import (
 	"net/url"
 	"testing"
+	"time"
 )
 
 func TestDecodePost(t *testing.T) {
@@ -170,6 +171,9 @@ func TestDecodePost(t *testing.T) {
 		}
 		if post.Body != testcase.body {
 			t.Errorf("expected post body to be '%s' but it was '%s'", testcase.body, post.Body)
+		}
+		if _, e := time.Parse(time.RFC3339, post.CreatedAt); e != nil {
+			t.Errorf("got error when parsing post CreatedAt timestamp '%s': '%s'", post.CreatedAt, e.Error())
 		}
 
 		if testcase.mediaURLs != nil {

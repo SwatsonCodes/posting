@@ -5,18 +5,19 @@ import (
 	"fmt"
 	"net/url"
 	"strconv"
+	"time"
 )
 
 type Post struct {
 	ID        string    `json:"post_id"`
 	Body      string    `json:"body"`
 	MediaURLs *[]string `json:"media_urls"`
-	// TODO: add timestamp
+	CreatedAt string    `json:"created_at"`
 }
 
 func ParsePost(form *url.Values) (post *Post, err error) {
 	var id, body, numMedia string
-	post = new(Post)
+	post = &Post{CreatedAt: time.Now().Format(time.RFC3339)}
 	if id = form.Get("SmsSid"); id == "" {
 		return nil, errors.New("SmsSid field not present")
 	}
