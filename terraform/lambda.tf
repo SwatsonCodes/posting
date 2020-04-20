@@ -42,6 +42,11 @@ resource "aws_iam_role_policy_attachment" "lambda_very_nice" {
   role       = aws_iam_role.lambda_very_nice.name
 }
 
+resource "aws_iam_role_policy_attachment" "lambda_dynamodb_read_write_posts" {
+  policy_arn = aws_iam_policy.dynamodb_posts_read_write.arn
+  role       = aws_iam_role.lambda_very_nice.name
+}
+
 resource "aws_lambda_permission" "api_gateway_base_invoke_very_nice_lambda" {
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.very_nice.function_name
