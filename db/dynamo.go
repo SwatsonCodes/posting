@@ -30,6 +30,7 @@ func (dynamo dynamo) PutPost(post models.Post) (err error) {
 		return
 	}
 
+	// TODO: dont allow items to be overwritten
 	_, err = (*dynamo.svc).PutItem(&dynamodb.PutItemInput{
 		TableName: &dynamo.Table,
 		Item:      item,
@@ -44,7 +45,7 @@ func (dynamo dynamo) GetPosts() (*[]models.Post, error) {
 		return nil, err
 	}
 	if *result.Count <= 0 {
-		return nil, err
+		return &[]models.Post{}, nil
 	}
 
 	posts := make([]models.Post, *result.Count)

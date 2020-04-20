@@ -8,9 +8,9 @@ import (
 )
 
 type Post struct {
-	ID        string
-	Body      string
-	MediaURLs *[]string
+	ID        string    `json:"post_id"`
+	Body      string    `json:"body"`
+	MediaURLs *[]string `json:"media_urls"`
 	// TODO: add timestamp
 }
 
