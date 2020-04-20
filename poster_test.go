@@ -130,49 +130,81 @@ func TestGetPosts(t *testing.T) {
 	}
 }
 
-func TestIsPosterAuthorized(t *testing.T) {
-	poster := Poster{
-		TwilioAccountID: "abc123",
-		AllowedSender:   "+15558675309",
+func TestGetExpectedTwilioSignature(t *testing.T) {
+	// based on https://www.twilio.com/docs/security#validating-requests
+	_url := []byte("https://mycompany.com/myapp.php?foo=1&bar=2")
+	authToken := []byte("12345")
+	expectedSignature := "0/KCTR6DLpKmkAf8muzZqo1nDgQ="
+	postForm := url.Values{
+		"CallSid": {"CA1234567890ABCDE"},
+		"Caller":  {"+12349013030"},
+		"Digits":  {"1234"},
+		"From":    {"+12349013030"},
+		"To":      {"+18005551212"},
 	}
 
+	assert.Equal(t, expectedSignature, GetExpectedTwilioSignature(_url, authToken, postForm))
+	postForm["New"] = []string{"data"}
+	assert.NotEqual(t, expectedSignature, GetExpectedTwilioSignature(_url, authToken, postForm))
+}
+
+func TestIsRequestAuthorized(t *testing.T) {
+	// based on https://www.twilio.com/docs/security#validating-requests
+	poster := Poster{
+		TwilioAuthToken: "12345",
+	}
+	_url := "https://mycompany.com/myapp.php?foo=1&bar=2"
+	validSender := "+12349013030"
+	validForm := url.Values{
+		"CallSid": {"CA1234567890ABCDE"},
+		"Caller":  {"+12349013030"},
+		"Digits":  {"1234"},
+		"From":    {validSender},
+		"To":      {"+18005551212"},
+	}
+	validHeaders := map[string]string{"X-Twilio-Signature": "0/KCTR6DLpKmkAf8muzZqo1nDgQ="}
+
 	testcases := []struct {
-		postForm   *map[string][]string
-		authorized bool
+		form          url.Values
+		headers       map[string]string
+		allowedSender string
+		isAuthorized  bool
 	}{
-		{&map[string][]string{
-			"AccountSid": []string{poster.TwilioAccountID},
-			"From":       []string{poster.AllowedSender},
-		}, true},
-		{&map[string][]string{
-			"AccountSid": []string{"bad"},
-			"From":       []string{poster.AllowedSender},
-		}, false},
-		{&map[string][]string{
-			"AccountSid": []string{poster.TwilioAccountID},
-			"From":       []string{"bad"},
-		}, false},
-		{&map[string][]string{
-			"AccountSid": []string{"bad"},
-			"From":       []string{"bad"},
-		}, false},
-		{&map[string][]string{
-			"From": []string{poster.AllowedSender},
-		}, false},
-		{&map[string][]string{
-			"AccountSid": []string{poster.TwilioAccountID},
-		}, false},
-		{&map[string][]string{
-			"AccountSid": []string{poster.TwilioAccountID},
-		}, false},
+		{
+			validForm,
+			validHeaders,
+			validSender,
+			true,
+		},
+		{
+			validForm,
+			map[string]string{},
+			validSender,
+			false,
+		},
+		{
+			validForm,
+			validHeaders,
+			"some other sender",
+			false,
+		},
+		{
+			url.Values{
+				"foo": {"bar"},
+			},
+			validHeaders,
+			validSender,
+			false,
+		},
 	}
 
 	for _, testcase := range testcases {
-		req, _ := http.NewRequest(http.MethodGet, "/test", nil)
-		req.PostForm = *testcase.postForm
-		isAuthorized := poster.IsRequestAuthorized(req)
-		if isAuthorized != testcase.authorized {
-			t.Errorf("expected '%v' but got '%v'", testcase.authorized, isAuthorized)
+		poster.AllowedSender = testcase.allowedSender
+		req, _ := http.NewRequest(http.MethodPost, _url, nil)
+		req.PostForm = testcase.form
+		for k, v := range testcase.headers {
+			req.Header.Set(k, v)
 		}
+		assert.Equal(t, testcase.isAuthorized, poster.IsRequestAuthorized(req))
 	}
 }

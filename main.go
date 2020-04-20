@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/awslabs/aws-lambda-go-api-proxy/gorillamux"
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"github.com/swatsoncodes/very-nice-website/db"
@@ -24,23 +25,20 @@ func isRunningInLambda() bool {
 
 func main() {
 	var dynamoEndpoint *string
+	var sender, twilioToken string
+	var ok bool
 	log.SetFormatter(&log.JSONFormatter{DisableHTMLEscape: true})
 	log.Info("hello")
 
-	sender, ok := os.LookupEnv("ALLOWED_SENDER")
-	if !ok {
+	if sender, ok = os.LookupEnv("ALLOWED_SENDER"); !ok {
 		log.Fatal("env var ALLOWED_SENDER not set")
 	}
-	accountID, ok := os.LookupEnv("TWILIO_ACCOUNT_ID")
-	if !ok {
-		log.Fatal("env var TWILIO_ACCOUNT_ID not set")
+	if twilioToken, ok = os.LookupEnv("TWILIO_AUTH_TOKEN"); !ok {
+		log.Fatal("env var TWILIO_AUTH_TOKEN not set")
 	}
 	if de, ok := os.LookupEnv("DYNAMODB_ENDPOINT"); ok {
 		dynamoEndpoint = &de
 		log.Infof("using custom DynamoDB endpoint: '%s'", de)
-	}
-	if !ok {
-		log.Fatal("env var TWILIO_ACCOUNT_ID not set")
 	}
 	maxBody := os.Getenv("MAX_REQUEST_BODY_SIZE_BYTES")
 	max, err := strconv.ParseInt(maxBody, 10, 0)
@@ -51,11 +49,11 @@ func main() {
 
 	db, err := db.New(tableName, dynamoEndpoint)
 	if err != nil {
-		panic(err)
+		log.WithError(err).Fatal("failed to initialize db")
 	}
 	poster := Poster{
 		AllowedSender:           sender,
-		TwilioAccountID:         accountID,
+		TwilioAuthToken:         twilioToken,
 		MaxRequestBodySizeBytes: max,
 		DB:                      db,
 	}
@@ -68,6 +66,8 @@ func main() {
 		Methods(http.MethodPost).
 		Headers("Content-Type", "application/x-www-form-urlencoded")
 	router.HandleFunc("/posts", poster.GetPosts).Methods(http.MethodGet)
+	router.Use(handlers.ProxyHeaders)
+	router.Use(middleware.SetURLHost)
 	adapter := gorillamux.New(router)
 
 	if isRunningInLambda() {

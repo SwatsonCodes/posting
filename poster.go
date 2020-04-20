@@ -1,9 +1,15 @@
 package main
 
 import (
+	"bytes"
+	"crypto/hmac"
+	"crypto/sha1"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
+	"sort"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/swatsoncodes/very-nice-website/db"
@@ -23,7 +29,7 @@ const cowsay string = `
 
 type Poster struct {
 	AllowedSender           string
-	TwilioAccountID         string
+	TwilioAuthToken         string
 	MaxRequestBodySizeBytes int64
 	DB                      db.PostsDB
 }
@@ -33,7 +39,6 @@ func GoAway(w http.ResponseWriter, r *http.Request) {
 }
 
 func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
-	// TODO: verify that request is actually coming from twilio using validation API
 	err := r.ParseForm()
 	if err != nil {
 		log.WithError(err).Warn("failed to parse form body")
@@ -77,6 +82,34 @@ func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
+func GetExpectedTwilioSignature(url, authToken []byte, postForm url.Values) (expectedTwilioSignature string) {
+	var i int
+	var buffer bytes.Buffer
+	var postFormLen = len(postForm)
+	keys := make([]string, postFormLen)
+
+	// sort keys in request form body
+	for key := range postForm {
+		keys[i] = key
+		i++
+	}
+	sort.Strings(keys)
+
+	// append sorted key/val pairs in order to request url
+	buffer.Write(url)
+	for _, key := range keys {
+		buffer.WriteString(key)
+		buffer.WriteString(postForm[key][0])
+	}
+	b := buffer.Bytes()
+	log.Warn(string(b))
+
+	// sign with HMAC-SHA1 using auth token
+	mac := hmac.New(sha1.New, []byte(authToken))
+	mac.Write(b)
+	return base64.StdEncoding.EncodeToString(mac.Sum(nil))
+}
+
 func (poster Poster) IsRequestAuthorized(r *http.Request) bool {
 	err := r.ParseForm()
 	if err != nil {
@@ -84,11 +117,17 @@ func (poster Poster) IsRequestAuthorized(r *http.Request) bool {
 		return false
 	}
 
-	if accountID, aOK := (r.PostForm)["AccountSid"]; aOK {
-		if sender, sOK := (r.PostForm)["From"]; sOK {
-			return accountID[0] == poster.TwilioAccountID && sender[0] == poster.AllowedSender
+	if sig := r.Header.Get("X-Twilio-Signature"); sig != "" {
+		if sig != GetExpectedTwilioSignature(
+			[]byte(r.URL.String()),
+			[]byte(poster.TwilioAuthToken),
+			r.PostForm,
+		) {
+			return false
 		}
+	} else {
 		return false
 	}
-	return false
+
+	return r.PostForm.Get("From") == poster.AllowedSender
 }
