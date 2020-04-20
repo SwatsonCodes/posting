@@ -33,6 +33,7 @@ func GoAway(w http.ResponseWriter, r *http.Request) {
 }
 
 func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
+	// TODO: verify that request is actually coming from twilio using validation API
 	err := r.ParseForm()
 	if err != nil {
 		log.WithError(err).Warn("failed to parse form body")
@@ -47,12 +48,12 @@ func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: verify that post ID corresponds to a message ID via Twilio API
 	if err := poster.DB.PutPost(*post); err != nil {
 		log.WithError(err).Error("failed to put post to DB")
 		http.Error(w, "unable to save post", http.StatusInternalServerError)
 		return
 	}
+	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
 }
 
