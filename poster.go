@@ -17,9 +17,9 @@ import (
 )
 
 const cowsay string = `
- ____________
-< GO AWAY <3 >
- ------------
+ _____
+< no  >
+ -----
         \   ^__^
          \  (oo)\_______
             (__)\       )\/\
@@ -67,6 +67,10 @@ func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 		log.WithError(err).Error("failed to get posts from db")
 		http.Error(w, "unable to retrieve posts", http.StatusInternalServerError)
 		return
+	}
+
+	for _, post := range *posts {
+		post.ResolveMediaURLs()
 	}
 
 	resp, err := json.Marshal(*posts)

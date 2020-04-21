@@ -3,7 +3,6 @@ package main
 import (
 	"net/http"
 	"os"
-	"strconv"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -15,8 +14,8 @@ import (
 	"github.com/swatsoncodes/very-nice-website/middleware"
 )
 
-const defaultBodyLimit middleware.RequestBodyLimitBytes = 32 * 1024 // 32KiB
-const tableName = "posts"                                           // TODO: make this configurable
+const bodySizeLimit middleware.RequestBodyLimitBytes = 32 * 1024 // 32KiB
+const tableName = "posts"                                        // TODO: make this configurable
 
 func isRunningInLambda() bool {
 	_, inLambda := os.LookupEnv("LAMBDA_TASK_ROOT")
@@ -26,7 +25,6 @@ func isRunningInLambda() bool {
 func main() {
 	var dynamoEndpoint *string
 	var sender, twilioToken string
-	var requestBodyLimit middleware.RequestBodyLimitBytes
 	var ok bool
 	log.SetFormatter(&log.JSONFormatter{DisableHTMLEscape: true})
 	log.Info("hello")
@@ -41,13 +39,6 @@ func main() {
 		dynamoEndpoint = &de
 		log.Infof("using custom DynamoDB endpoint: '%s'", de)
 	}
-	maxBody := os.Getenv("MAX_REQUEST_BODY_SIZE_BYTES")
-	if max, err := strconv.ParseInt(maxBody, 10, 0); err != nil {
-		log.Warnf("env var MAX_REQUEST_BODY_SIZE_BYTES not set or invalid. using default value of %d", defaultBodyLimit)
-		requestBodyLimit = defaultBodyLimit
-	} else {
-		requestBodyLimit = middleware.RequestBodyLimitBytes(max)
-	}
 
 	db, err := db.New(tableName, dynamoEndpoint)
 	if err != nil {
@@ -60,14 +51,19 @@ func main() {
 	}
 	router := mux.NewRouter()
 
-	router.HandleFunc("/", GoAway).Methods(http.MethodGet)
 	router.Handle("/posts",
-		requestBodyLimit.LimitRequestBody( // guard against giant posts
+		bodySizeLimit.LimitRequestBody( // guard against giant posts
 			middleware.AuthChecker(poster.IsRequestAuthorized).CheckAuth( // make sure posters are authorized
 				http.HandlerFunc(poster.CreatePost)))).
 		Methods(http.MethodPost).
 		Headers("Content-Type", "application/x-www-form-urlencoded")
 	router.HandleFunc("/posts", poster.GetPosts).Methods(http.MethodGet)
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/posts", http.StatusMovedPermanently)
+	}).Methods(http.MethodGet)
+
+	router.NotFoundHandler = http.HandlerFunc(GoAway)
+
 	router.Use(middleware.LogRequest)
 	router.Use(handlers.ProxyHeaders)
 	router.Use(middleware.SetURLHost)

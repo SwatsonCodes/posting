@@ -4,6 +4,8 @@ import (
 	"net/url"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestDecodePost(t *testing.T) {
@@ -12,7 +14,7 @@ func TestDecodePost(t *testing.T) {
 		shouldErr bool
 		id        string
 		body      string
-		mediaURLs *[]string
+		mediaURLs []string
 	}{
 		{
 			&url.Values{
@@ -43,7 +45,7 @@ func TestDecodePost(t *testing.T) {
 			false,
 			"abc123",
 			"hello",
-			&[]string{"http://www.example.com"},
+			[]string{"http://www.example.com"},
 		},
 		{
 			&url.Values{
@@ -57,7 +59,7 @@ func TestDecodePost(t *testing.T) {
 			false,
 			"abc123",
 			"hello",
-			&[]string{"http://example.com/0", "http://example.com/1", "http://example.com/2"},
+			[]string{"http://example.com/0", "http://example.com/1", "http://example.com/2"},
 		},
 		{
 			&url.Values{
@@ -70,7 +72,7 @@ func TestDecodePost(t *testing.T) {
 			false,
 			"abc123",
 			"hello",
-			&[]string{"http://example.com/0"},
+			[]string{"http://example.com/0"},
 		},
 		{
 			&url.Values{
@@ -153,44 +155,16 @@ func TestDecodePost(t *testing.T) {
 	for _, testcase := range testcases {
 		post, err := ParsePost(testcase.form)
 		if testcase.shouldErr {
-			if err == nil {
-				t.Error("expected error but got nil")
-			}
-			if post != nil {
-				t.Error("expected post to be nil due to error, but it wasnt")
-			}
+			assert.Error(t, err)
+			assert.Nil(t, post)
 			continue
 		}
 
-		if err != nil {
-			t.Errorf("got unexpected error: %s", err.Error())
-		}
-
-		if post.ID != testcase.id {
-			t.Errorf("expected post ID to be '%s' but it was '%s'", testcase.id, post.ID)
-		}
-		if post.Body != testcase.body {
-			t.Errorf("expected post body to be '%s' but it was '%s'", testcase.body, post.Body)
-		}
-		if _, e := time.Parse(time.RFC3339, post.CreatedAt); e != nil {
-			t.Errorf("got error when parsing post CreatedAt timestamp '%s': '%s'", post.CreatedAt, e.Error())
-		}
-
-		if testcase.mediaURLs != nil {
-			if post.MediaURLs == nil {
-				t.Error("expected post to have MediaURLs, but the field is nil")
-				continue
-			}
-			if len(*testcase.mediaURLs) != len(*post.MediaURLs) {
-				t.Errorf("expected post to have %d MediaURLs, but it has %d", len(*testcase.mediaURLs), len(*post.MediaURLs))
-			}
-			for i, mURL := range *testcase.mediaURLs {
-				if pmURL := (*post.MediaURLs)[i]; mURL != pmURL {
-					t.Errorf("expected MediaURL%d to be %s, but it was %s", i, mURL, pmURL)
-				}
-			}
-		}
-
+		assert.Nil(t, err)
+		assert.Equal(t, testcase.id, post.ID)
+		assert.Equal(t, testcase.body, post.Body)
+		_, e := time.Parse(time.RFC3339, post.CreatedAt)
+		assert.Nil(t, e, "expected post timestamp to be in ISO format")
+		assert.Equal(t, testcase.mediaURLs, post.MediaURLs)
 	}
-
 }

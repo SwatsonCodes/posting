@@ -3,16 +3,19 @@ package models
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"net/url"
 	"strconv"
 	"time"
+
+	log "github.com/sirupsen/logrus"
 )
 
 type Post struct {
-	ID        string    `json:"post_id"`
-	Body      string    `json:"body"`
-	MediaURLs *[]string `json:"media_urls"`
-	CreatedAt string    `json:"created_at"`
+	ID        string   `json:"post_id"`
+	Body      string   `json:"body"`
+	MediaURLs []string `json:"media_urls,omitempty"`
+	CreatedAt string   `json:"created_at"`
 }
 
 func ParsePost(form *url.Values) (post *Post, err error) {
@@ -47,6 +50,18 @@ func ParsePost(form *url.Values) (post *Post, err error) {
 		}
 		return nil, fmt.Errorf("NumMedia claims '%d' MediaURLs are present, but fewer were found", nm)
 	}
-	post.MediaURLs = &mediaURLs
+	post.MediaURLs = mediaURLs
 	return
+}
+
+func (post Post) ResolveMediaURLs() {
+	for i, url := range post.MediaURLs {
+		resp, err := http.Get(url)
+		if err != nil {
+			log.WithError(err).Warnf("failed to GET url '%s'", url)
+			continue
+		}
+
+		post.MediaURLs[i] = resp.Request.URL.String()
+	}
 }
