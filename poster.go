@@ -100,12 +100,9 @@ func GetExpectedTwilioSignature(url, authToken []byte, postForm url.Values) (exp
 		buffer.WriteString(key)
 		buffer.WriteString(postForm[key][0])
 	}
-	b := buffer.Bytes()
-	log.Warn(string(b))
-
 	// sign with HMAC-SHA1 using auth token
 	mac := hmac.New(sha1.New, []byte(authToken))
-	mac.Write(b)
+	mac.Write(buffer.Bytes())
 	return base64.StdEncoding.EncodeToString(mac.Sum(nil))
 }
 

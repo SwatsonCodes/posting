@@ -68,6 +68,7 @@ func main() {
 		Methods(http.MethodPost).
 		Headers("Content-Type", "application/x-www-form-urlencoded")
 	router.HandleFunc("/posts", poster.GetPosts).Methods(http.MethodGet)
+	router.Use(middleware.LogRequest)
 	router.Use(handlers.ProxyHeaders)
 	router.Use(middleware.SetURLHost)
 	adapter := gorillamux.New(router)
