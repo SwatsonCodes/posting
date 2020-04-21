@@ -11,7 +11,7 @@ resource "aws_lambda_function" "very_nice" {
   environment {
     variables = {
       ALLOWED_SENDER              = "+14062611340",
-      TWILIO_ACCOUNT_ID           = "AC7d079fdfd5ee9479aa157cb85da14497",
+      TWILIO_AUTH_TOKEN           = var.twilio_auth_token,
       MAX_REQUEST_BODY_SIZE_BYTES = "32768",
     }
   }
