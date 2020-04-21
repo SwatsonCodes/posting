@@ -17,3 +17,20 @@ docker-dynamo-kill:
 .PHONY: run-local
 run-local:
 	export `cat dev_vars.env | xargs` && go run .
+
+.PHONY: clean
+clean:
+	rm main
+	rm nice_lambda.zip
+
+.PHONY: build
+build:
+	GOOS=linux go build main.go poster.go
+
+.PHONY: package
+package:
+	zip nice_lambda.zip main
+
+.PHONY: lambda-update
+lambda-update: clean build package
+	aws lambda update-function-code --function-name very_nice --zip-file fileb://nice_lambda.zip --publish
