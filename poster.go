@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"sort"
+	"sync"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/swatsoncodes/very-nice-website/db"
@@ -62,6 +63,8 @@ func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 }
 
 func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
+	var wg sync.WaitGroup
+
 	posts, err := poster.DB.GetPosts()
 	if err != nil {
 		log.WithError(err).Error("failed to get posts from db")
@@ -69,10 +72,14 @@ func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: parallelize this
-	for _, post := range *posts {
-		post.ResolveMediaURLs()
+	for i := range *posts {
+		wg.Add(1)
+		go func(post *models.Post) {
+			post.ResolveMediaURLs()
+			wg.Done()
+		}(&(*posts)[i])
 	}
+	wg.Wait()
 
 	resp, err := json.Marshal(*posts)
 	if err != nil {

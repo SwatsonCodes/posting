@@ -6,9 +6,8 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
-
-	log "github.com/sirupsen/logrus"
 )
 
 type Post struct {
@@ -54,14 +53,16 @@ func ParsePost(form *url.Values) (post *Post, err error) {
 	return
 }
 
-func (post Post) ResolveMediaURLs() {
+func (post *Post) ResolveMediaURLs() {
+	var wg sync.WaitGroup
 	for i, url := range post.MediaURLs {
-		resp, err := http.Get(url)
-		if err != nil {
-			log.WithError(err).Warnf("failed to GET url '%s'", url)
-			continue
-		}
-
-		post.MediaURLs[i] = resp.Request.URL.String()
+		wg.Add(1)
+		go func(i int, url string) {
+			if resp, err := http.Get(url); err == nil {
+				post.MediaURLs[i] = resp.Request.URL.String()
+			}
+			wg.Done()
+		}(i, url)
 	}
+	wg.Wait()
 }
