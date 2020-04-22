@@ -71,3 +71,14 @@ resource "aws_api_gateway_deployment" "production" {
   rest_api_id = aws_api_gateway_rest_api.samsverynice.id
   stage_name  = "production"
 }
+
+resource "aws_api_gateway_domain_name" "samsverynice_website" {
+  domain_name     = "samsverynice.website"
+  certificate_arn = aws_acm_certificate.samsverynice_website.arn
+}
+
+resource "aws_api_gateway_base_path_mapping" "prod" {
+  api_id      = aws_api_gateway_rest_api.samsverynice.id
+  stage_name  = aws_api_gateway_deployment.production.stage_name
+  domain_name = aws_api_gateway_domain_name.samsverynice_website.domain_name
+}

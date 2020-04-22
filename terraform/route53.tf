@@ -4,14 +4,22 @@ resource "aws_route53_zone" "samsverynice" {
   comment       = "HostedZone created by Route53 Registrar"
 }
 
-resource "aws_route53_record" "samsverynice_alias_cloudfront" {
+resource "aws_route53_record" "samsverynice_alias_apig" {
   zone_id = aws_route53_zone.samsverynice.zone_id
   name    = "samsverynice.website."
   type    = "A"
 
   alias {
-    name                   = aws_cloudfront_distribution.verynice.domain_name
-    zone_id                = aws_cloudfront_distribution.verynice.hosted_zone_id
+    name                   = aws_api_gateway_domain_name.samsverynice_website.cloudfront_domain_name
+    zone_id                = aws_api_gateway_domain_name.samsverynice_website.cloudfront_zone_id
     evaluate_target_health = false
   }
+}
+
+resource "aws_route53_record" "samsverynice_cert_validation" {
+  name    = aws_acm_certificate.samsverynice_website.domain_validation_options.0.resource_record_name
+  type    = aws_acm_certificate.samsverynice_website.domain_validation_options.0.resource_record_type
+  zone_id = aws_route53_zone.samsverynice.id
+  records = [aws_acm_certificate.samsverynice_website.domain_validation_options.0.resource_record_value]
+  ttl     = 300
 }
