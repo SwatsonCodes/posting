@@ -7,7 +7,6 @@ import (
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/awslabs/aws-lambda-go-api-proxy/gorillamux"
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"github.com/swatsoncodes/very-nice-website/db"
@@ -65,8 +64,6 @@ func main() {
 	router.NotFoundHandler = http.HandlerFunc(GoAway)
 
 	router.Use(middleware.LogRequest)
-	router.Use(handlers.ProxyHeaders)
-	router.Use(middleware.SetURLHost)
 	adapter := gorillamux.New(router)
 
 	if isRunningInLambda() {

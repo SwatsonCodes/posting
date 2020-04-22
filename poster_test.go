@@ -132,8 +132,8 @@ func TestGetPosts(t *testing.T) {
 
 func TestGetExpectedTwilioSignature(t *testing.T) {
 	// based on https://www.twilio.com/docs/security#validating-requests
-	_url := []byte("https://mycompany.com/myapp.php?foo=1&bar=2")
-	authToken := []byte("12345")
+	_url := "https://mycompany.com/myapp.php?foo=1&bar=2"
+	authToken := "12345"
 	expectedSignature := "0/KCTR6DLpKmkAf8muzZqo1nDgQ="
 	postForm := url.Values{
 		"CallSid": {"CA1234567890ABCDE"},

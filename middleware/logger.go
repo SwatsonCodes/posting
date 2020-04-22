@@ -2,11 +2,11 @@ package middleware
 
 import (
 	"net/http"
-	"os"
 
 	"github.com/gorilla/handlers"
+	"github.com/sirupsen/logrus"
 )
 
 func LogRequest(next http.Handler) http.Handler {
-	return handlers.CombinedLoggingHandler(os.Stdout, next)
+	return handlers.CombinedLoggingHandler(logrus.StandardLogger().Writer(), next)
 }

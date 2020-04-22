@@ -69,6 +69,7 @@ func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO: parallelize this
 	for _, post := range *posts {
 		post.ResolveMediaURLs()
 	}
@@ -85,7 +86,8 @@ func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 	w.Write(resp)
 }
 
-func GetExpectedTwilioSignature(url, authToken []byte, postForm url.Values) (expectedTwilioSignature string) {
+func GetExpectedTwilioSignature(url, authToken string, postForm url.Values) (expectedTwilioSignature string) {
+	log.Info(url)
 	var i int
 	var buffer bytes.Buffer
 	var postFormLen = len(postForm)
@@ -98,8 +100,8 @@ func GetExpectedTwilioSignature(url, authToken []byte, postForm url.Values) (exp
 	}
 	sort.Strings(keys)
 
-	// append sorted key/val pairs in order to request url
-	buffer.Write(url)
+	// append sorted key/val pairs to url in order
+	buffer.WriteString(url)
 	for _, key := range keys {
 		buffer.WriteString(key)
 		buffer.WriteString(postForm[key][0])
@@ -119,8 +121,8 @@ func (poster Poster) IsRequestAuthorized(r *http.Request) bool {
 
 	if sig := r.Header.Get("X-Twilio-Signature"); sig != "" {
 		if sig != GetExpectedTwilioSignature(
-			[]byte(r.URL.String()),
-			[]byte(poster.TwilioAuthToken),
+			getClientURL(r),
+			poster.TwilioAuthToken,
 			r.PostForm,
 		) {
 			return false
@@ -130,4 +132,32 @@ func (poster Poster) IsRequestAuthorized(r *http.Request) bool {
 	}
 
 	return r.PostForm.Get("From") == poster.AllowedSender
+}
+
+func getClientURL(r *http.Request) string {
+	var scheme, host string
+	if scheme = r.Header.Get("X-Forwarded-Proto"); scheme != "" {
+		goto GetHost
+	}
+	if scheme = r.Header.Get("X-Forwarded-Scheme"); scheme != "" {
+		goto GetHost
+	}
+	scheme = r.URL.Scheme
+
+GetHost:
+	// it appears that API Gateway Lambda proxy integration sets r.Host with its own value
+	// so check the headers first for "real" host
+	if host = r.Header.Get("Host"); host != "" {
+		goto Done
+	}
+	if host = r.Host; host != "" {
+		goto Done
+	}
+	host = r.URL.Host
+
+Done:
+	if r.URL.RawQuery == "" {
+		return fmt.Sprintf("%s://%s%s", scheme, host, r.URL.Path)
+	}
+	return fmt.Sprintf("%s://%s%s?%s", scheme, host, r.URL.Path, r.URL.RawQuery)
 }

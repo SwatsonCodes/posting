@@ -40,6 +40,7 @@ func (dynamo dynamo) PutPost(post models.Post) (err error) {
 
 func (dynamo dynamo) GetPosts() (*[]models.Post, error) {
 	// TODO: pagination stuff
+	// TODO: get posts in order by time
 	result, err := (*dynamo.svc).Scan(&dynamodb.ScanInput{TableName: &dynamo.Table})
 	if err != nil {
 		return nil, err
