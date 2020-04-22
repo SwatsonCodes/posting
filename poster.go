@@ -87,7 +87,6 @@ func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 }
 
 func GetExpectedTwilioSignature(url, authToken string, postForm url.Values) (expectedTwilioSignature string) {
-	log.Info(url)
 	var i int
 	var buffer bytes.Buffer
 	var postFormLen = len(postForm)
