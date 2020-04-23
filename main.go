@@ -26,6 +26,7 @@ func main() {
 	var sender, twilioToken, gcloudID string
 	var ok bool
 	inLambda := isRunningInLambda()
+	templatesPath := "templates"
 	log.SetFormatter(&log.JSONFormatter{DisableHTMLEscape: true})
 	log.Info("hello")
 
@@ -40,11 +41,13 @@ func main() {
 	}
 
 	if inLambda {
+		task_root := os.Getenv("LAMBDA_TASK_ROOT")
 		os.Setenv("GOOGLE_APPLICATION_CREDENTIALS",
 			path.Join(
-				os.Getenv("LAMBDA_TASK_ROOT"),
+				task_root,
 				"gcloud_poster_creds.json"),
 		)
+		templatesPath = path.Join(task_root, templatesPath)
 	}
 
 	db, err := db.NewFirestoreClient(gcloudID, collectionName)
@@ -55,6 +58,7 @@ func main() {
 		AllowedSender:   sender,
 		TwilioAuthToken: twilioToken,
 		DB:              db,
+		TemplatesPath:   templatesPath,
 	}
 	router := mux.NewRouter()
 

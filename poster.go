@@ -5,12 +5,13 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
+	"path"
 	"sort"
 	"sync"
+	"text/template"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/swatsoncodes/very-nice-website/db"
@@ -32,6 +33,7 @@ type Poster struct {
 	AllowedSender   string
 	TwilioAuthToken string
 	DB              db.PostsDB
+	TemplatesPath   string
 }
 
 func GoAway(w http.ResponseWriter, r *http.Request) {
@@ -81,16 +83,8 @@ func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 	}
 	wg.Wait()
 
-	resp, err := json.Marshal(*posts)
-	if err != nil {
-		log.WithError(err).Error("failed to marshal posts to json")
-		http.Error(w, "unable to retrieve posts", http.StatusInternalServerError)
-		return
-	}
-
-	// TODO: don't just serve raw json as response
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(resp)
+	tmpl := template.Must(template.ParseFiles(path.Join(poster.TemplatesPath, "posts.template")))
+	tmpl.Execute(w, *posts)
 }
 
 func GetExpectedTwilioSignature(url, authToken string, postForm url.Values) (expectedTwilioSignature string) {
