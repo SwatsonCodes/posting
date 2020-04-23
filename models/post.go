@@ -11,10 +11,10 @@ import (
 )
 
 type Post struct {
-	ID        string   `json:"post_id"`
-	Body      string   `json:"body"`
-	MediaURLs []string `json:"media_urls,omitempty"`
-	CreatedAt string   `json:"created_at"`
+	ID        string   `json:"post_id" firestore:"post_id"`
+	Body      string   `json:"body" firestore:"body"`
+	MediaURLs []string `json:"media_urls,omitempty" firestore:"media_urls,omitempty"`
+	CreatedAt string   `json:"created_at" firestore:"created_at"`
 }
 
 func ParsePost(form *url.Values) (post *Post, err error) {

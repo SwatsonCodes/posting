@@ -29,7 +29,7 @@ build:
 
 .PHONY: package
 package:
-	zip nice_lambda.zip main
+	zip nice_lambda.zip main gcloud_poster_creds.json
 
 .PHONY: lambda-update
 lambda-update: clean build package

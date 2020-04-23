@@ -3,6 +3,7 @@ package main
 import (
 	"net/http"
 	"os"
+	"path"
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
@@ -14,7 +15,7 @@ import (
 )
 
 const bodySizeLimit middleware.RequestBodyLimitBytes = 32 * 1024 // 32KiB
-const tableName = "posts"                                        // TODO: make this configurable
+const collectionName = "posts"                                   // TODO: make this configurable
 
 func isRunningInLambda() bool {
 	_, inLambda := os.LookupEnv("LAMBDA_TASK_ROOT")
@@ -22,9 +23,9 @@ func isRunningInLambda() bool {
 }
 
 func main() {
-	var dynamoEndpoint *string
-	var sender, twilioToken string
+	var sender, twilioToken, gcloudID string
 	var ok bool
+	inLambda := isRunningInLambda()
 	log.SetFormatter(&log.JSONFormatter{DisableHTMLEscape: true})
 	log.Info("hello")
 
@@ -34,12 +35,19 @@ func main() {
 	if twilioToken, ok = os.LookupEnv("TWILIO_AUTH_TOKEN"); !ok {
 		log.Fatal("env var TWILIO_AUTH_TOKEN not set")
 	}
-	if de, ok := os.LookupEnv("DYNAMODB_ENDPOINT"); ok {
-		dynamoEndpoint = &de
-		log.Infof("using custom DynamoDB endpoint: '%s'", de)
+	if gcloudID, ok = os.LookupEnv("GCLOUD_PROJECT_ID"); !ok {
+		log.Fatal("env var GCLOUD_PROJECT_ID not set")
 	}
 
-	db, err := db.New(tableName, dynamoEndpoint)
+	if inLambda {
+		os.Setenv("GOOGLE_APPLICATION_CREDENTIALS",
+			path.Join(
+				os.Getenv("LAMBDA_TASK_ROOT"),
+				"gcloud_poster_creds.json"),
+		)
+	}
+
+	db, err := db.NewFirestoreClient(gcloudID, collectionName)
 	if err != nil {
 		log.WithError(err).Fatal("failed to initialize db")
 	}
@@ -66,7 +74,7 @@ func main() {
 	router.Use(middleware.LogRequest)
 	adapter := gorillamux.New(router)
 
-	if isRunningInLambda() {
+	if inLambda {
 		lambda.Start(func(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
 			return adapter.Proxy(req)
 		})

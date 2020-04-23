@@ -12,6 +12,7 @@ resource "aws_lambda_function" "very_nice" {
     variables = {
       ALLOWED_SENDER              = "+14062611340",
       TWILIO_AUTH_TOKEN           = var.twilio_auth_token,
+      GCLOUD_PROJECT_ID           = var.gcloud_project_id,
       MAX_REQUEST_BODY_SIZE_BYTES = "32768",
     }
   }
