@@ -2,7 +2,7 @@
 <html>
 <head>
 <style>
-body,html {
+body {
 	margin:0;
 	padding:0;
 }
@@ -13,12 +13,6 @@ body,html {
 }
 .image {
   position: absolute;
-}
-.background {
-	width: 100vw;
-	height: 100vh;
-	-webkit-filter: blur(5px);
-	-webkit-filter: opacity(20%);
 }
 .preview {
 	max-width: 90vw;
@@ -32,27 +26,37 @@ body,html {
 	box-shadow: 0 0 5px 2px rgba(0, 140, 186, 0.5);
 }
 .message {
-	bottom: 0vh;
-	width:100%;
+	bottom: 3vh;
+	width:100vw;
 	text-align: center;
 	position: sticky;
+	background-color: rgba(255, 255, 255, 0.5);
+	padding-top: 5px;
+	padding-bottom: 5px;
+}
+.container {
+	margin-top:25vh;
+	margin-bottom:25vh;
 }
 </style>
 </head>
 <body>
 {{ range $e := . }}
 	{{ if $e.MediaURLs }}
-		<div>
-		{{ range $e.MediaURLs }}
-			<div class="fullview">
-				<img class="image background" src="{{ . }}"/>
-				<a href="{{ . }}" target="_blank" rel="noopener noreferrer">
-					<img class="image preview" src="{{ . }}"/>
-				</a>
-			</div>
-		{{ end }}
-		<div class="message">{{ $e.Body }}</div>
+	<div>
+	{{ range $e.MediaURLs }}
+		<div class="fullview">
+		<a href="{{ . }}" target="_blank" rel="noopener noreferrer">
+			<img class="image preview" src="{{ . }}"/>
+		</a>
 		</div>
+	{{ end }}
+	<div class="message">{{ $e.Body }}</div>
+	</div>
+	{{ else }}
+	<div class="container">
+		<div class="message">{{ $e.Body }}</div>
+	</div>
 	{{ end }}
 {{ end }}
 </body>
