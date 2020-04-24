@@ -2,42 +2,58 @@
 <html>
 <head>
 <style>
-img {
-	padding: 1px;
+body,html {
+	margin:0;
+	padding:0;
 }
-img:hover {
-	box-shadow: 0 0 2px 1px rgba(0, 140, 186, 0.5);
+.fullview {
+	position: relative;
+	width: 100vw;
+	height: 100vh;
 }
-hr {
-	width:15%;
-	margin: auto;
-	border: 0;
-	height: 0;
-	border-top: 1px solid rgba(0, 0, 0, 0.1);
-	border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+.image {
+  position: absolute;
 }
-.post {
-	max-width: 800px;
-	margin: auto;
-	background: white;
-	padding: 10px;
+.background {
+	width: 100vw;
+	height: 100vh;
+	-webkit-filter: blur(5px);
+	-webkit-filter: opacity(20%);
+}
+.preview {
+	max-width: 90vw;
+	max-height: 90vh;
+	top: 50%;
+	left: 50%;
+	margin-right: -50%;
+	transform: translate(-50%, -50%)
+}
+.preview:hover {
+	box-shadow: 0 0 5px 2px rgba(0, 140, 186, 0.5);
+}
+.message {
+	bottom: 0vh;
+	width:100%;
 	text-align: center;
+	position: sticky;
 }
 </style>
 </head>
 <body>
-
-{{ range $i, $e  := . }}
-	{{ if $i }}<hr>{{ end }}
-	<div class="post">
+{{ range $e := . }}
+	{{ if $e.MediaURLs }}
+		<div>
 		{{ range $e.MediaURLs }}
-			<a target="_blank" href="{{ . }}">
-			  <img src="{{ . }}" style="width:800px">
-			</a>
-			{{ end }}
-		{{ .Body }}
-	</div>
+			<div class="fullview">
+				<img class="image background" src="{{ . }}"/>
+				<a href="{{ . }}" target="_blank" rel="noopener noreferrer">
+					<img class="image preview" src="{{ . }}"/>
+				</a>
+			</div>
+		{{ end }}
+		<div class="message">{{ $e.Body }}</div>
+		</div>
+	{{ end }}
 {{ end }}
-
 </body>
 </html>
