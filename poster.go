@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"path"
+	"path/filepath"
 	"sort"
 	"sync"
 	"text/template"
@@ -28,12 +28,21 @@ const cowsay string = `
                 ||----w |
                 ||     ||
 `
+const postsTemplate string = "posts.html"
 
 type Poster struct {
 	AllowedSender   string
 	TwilioAuthToken string
-	DB              db.PostsDB
-	TemplatesPath   string
+	DB              *db.PostsDB
+	PostsTemplate   *template.Template
+}
+
+func NewPoster(allowedSender, twilioAuthToken, templatesPath string, postsDB *db.PostsDB) (*Poster, error) {
+	template, err := template.ParseFiles(filepath.Join(templatesPath, postsTemplate))
+	if err != nil {
+		return nil, err
+	}
+	return &Poster{allowedSender, twilioAuthToken, postsDB, template}, nil
 }
 
 func GoAway(w http.ResponseWriter, r *http.Request) {
@@ -55,7 +64,7 @@ func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := poster.DB.PutPost(*post); err != nil {
+	if err := (*poster.DB).PutPost(*post); err != nil {
 		log.WithError(err).Error("failed to put post to DB")
 		http.Error(w, "unable to save post", http.StatusInternalServerError)
 		return
@@ -67,7 +76,7 @@ func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 	var wg sync.WaitGroup
 
-	posts, err := poster.DB.GetPosts()
+	posts, err := (*poster.DB).GetPosts()
 	if err != nil {
 		log.WithError(err).Error("failed to get posts from db")
 		http.Error(w, "unable to retrieve posts", http.StatusInternalServerError)
@@ -83,8 +92,11 @@ func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 	}
 	wg.Wait()
 
-	tmpl := template.Must(template.ParseFiles(path.Join(poster.TemplatesPath, "posts.template")))
-	tmpl.Execute(w, *posts)
+	if err = poster.PostsTemplate.Execute(w, *posts); err != nil {
+		log.WithError(err).Error(err.Error())
+		http.Error(w, "unable to render posts html", http.StatusInternalServerError)
+		return
+	}
 }
 
 func GetExpectedTwilioSignature(url, authToken string, postForm url.Values) (expectedTwilioSignature string) {

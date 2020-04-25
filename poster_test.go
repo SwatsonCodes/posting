@@ -1,14 +1,13 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
+	"text/template"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/swatsoncodes/very-nice-website/db"
@@ -42,12 +41,12 @@ func TestGoAway(t *testing.T) {
 }
 
 func TestCreatePost(t *testing.T) {
-	happyDB := mockPostsDB{shouldErr: false}
-	sadDB := mockPostsDB{shouldErr: true}
+	var happyDB db.PostsDB = mockPostsDB{shouldErr: false}
+	var sadDB db.PostsDB = mockPostsDB{shouldErr: true}
 	testcases := []struct {
 		body        string
 		contentType string
-		db          db.PostsDB
+		db          *db.PostsDB
 		statusCode  int
 	}{
 		{
@@ -57,13 +56,13 @@ func TestCreatePost(t *testing.T) {
 				"NumMedia": []string{"0"},
 			}.Encode(),
 			"application/x-www-form-urlencoded",
-			happyDB,
+			&happyDB,
 			http.StatusCreated,
 		},
 		{
 			"bad bod",
 			"application/x-www-form-urlencoded",
-			happyDB,
+			&happyDB,
 			http.StatusBadRequest,
 		},
 		{
@@ -73,7 +72,7 @@ func TestCreatePost(t *testing.T) {
 				"NumMedia": []string{"0"},
 			}.Encode(),
 			"text/plain; boundary=",
-			happyDB,
+			&happyDB,
 			http.StatusBadRequest,
 		},
 		{
@@ -83,7 +82,7 @@ func TestCreatePost(t *testing.T) {
 				"NumMedia": []string{"0"},
 			}.Encode(),
 			"application/x-www-form-urlencoded",
-			sadDB,
+			&sadDB,
 			http.StatusInternalServerError,
 		},
 	}
@@ -102,31 +101,23 @@ func TestCreatePost(t *testing.T) {
 }
 
 func TestGetPosts(t *testing.T) {
-	happyDB := mockPostsDB{shouldErr: false}
-	sadDB := mockPostsDB{shouldErr: true}
+	var happyDB db.PostsDB = mockPostsDB{shouldErr: false}
+	var sadDB db.PostsDB = mockPostsDB{shouldErr: true}
 	testcases := []struct {
-		db         db.PostsDB
+		db         *db.PostsDB
 		statusCode int
 	}{
-		{happyDB, http.StatusOK},
-		{sadDB, http.StatusInternalServerError},
+		{&happyDB, http.StatusOK},
+		{&sadDB, http.StatusInternalServerError},
 	}
 
 	for _, testcase := range testcases {
-		poster := Poster{DB: testcase.db}
+		poster := Poster{DB: testcase.db, PostsTemplate: template.Must(template.ParseFiles("templates/posts.html"))}
 		req, _ := http.NewRequest(http.MethodGet, "/test", nil)
 		rr := httptest.NewRecorder()
 		handler := http.HandlerFunc(poster.GetPosts)
 		handler.ServeHTTP(rr, req)
-
 		assert.Equal(t, testcase.statusCode, rr.Code)
-		if testcase.statusCode == http.StatusOK {
-			bod, _ := ioutil.ReadAll(rr.Body)
-			var posts []models.Post
-			err := json.Unmarshal(bod, &posts)
-			assert.Nil(t, err)
-			assert.NotNil(t, posts)
-		}
 	}
 }
 

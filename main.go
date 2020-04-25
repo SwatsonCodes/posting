@@ -50,16 +50,12 @@ func main() {
 		templatesPath = path.Join(task_root, templatesPath)
 	}
 
-	db, err := db.NewFirestoreClient(gcloudID, collectionName)
+	postsDB, err := db.NewFirestoreClient(gcloudID, collectionName)
 	if err != nil {
 		log.WithError(err).Fatal("failed to initialize db")
 	}
-	poster := Poster{
-		AllowedSender:   sender,
-		TwilioAuthToken: twilioToken,
-		DB:              db,
-		TemplatesPath:   templatesPath,
-	}
+	var pdb db.PostsDB = postsDB
+	poster, err := NewPoster(sender, twilioToken, templatesPath, &pdb)
 	router := mux.NewRouter()
 
 	router.Handle("/posts",
