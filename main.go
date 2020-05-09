@@ -79,7 +79,7 @@ func main() {
 			return adapter.Proxy(req)
 		})
 	} else {
-		log.Info("serving on port 8008")
-		http.ListenAndServe(":8008", router)
+		log.Info("serving on port 8080")
+		http.ListenAndServe(":8080", router)
 	}
 }

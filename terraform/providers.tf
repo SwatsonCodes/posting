@@ -17,6 +17,6 @@ provider "aws" {
 }
 
 provider "google" {
-  project = "dumb-projects"
+  project = var.gcloud_project_id
   region  = "us-central1"
 }

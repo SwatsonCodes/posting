@@ -8,7 +8,6 @@
 	display: block;
 	margin-left: auto;
 	margin-right: auto;
-	padding: 1%
 }
 .image:hover {
 	box-shadow: 0 0 5px 2px rgba(0, 140, 186, 0.5);
@@ -17,7 +16,6 @@
 	width: 100%;
 	justify-content: center;
 	margin-top: 5%;
-	margin-bottom: 5%;
 }
 .message {
 	bottom: 3%;
@@ -27,6 +25,7 @@
 	background-color: rgba(255, 255, 255, 0.5);
 	padding-top: 5px;
 	padding-bottom: 5px;
+	margin-top: 5vh;
 }
 .separator {
 	width: 20%;
@@ -38,10 +37,11 @@
 {{ range $e := . }}
 	<div class="post">
 	{{ if $e.MediaURLs }}
-	{{ range $e.MediaURLs }}
+	{{ range $i, $url := $e.MediaURLs }}
+		{{ if $i }}<div style="padding:10vh"></div>{{ end }}
 		<div>
-		<a href="{{ . }}" target="_blank" rel="noopener noreferrer">
-			<img class="image" src="{{ . }}"/>
+		<a href="{{ $url }}" target="_blank" rel="noopener noreferrer">
+			<img class="image" src="{{ $url }}"/>
 		</a>
 		</div>
 	{{ end }}

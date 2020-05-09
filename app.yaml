@@ -1,0 +1,12 @@
+runtime: go112
+
+instance_class: F1
+
+env_variables:
+  ALLOWED_SENDER: ""
+  TWILIO_AUTH_TOKEN: ""
+  GCLOUD_PROJECT_ID: ""
+
+handlers:
+- url: /.*
+  script: auto
