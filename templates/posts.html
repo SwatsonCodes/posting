@@ -31,6 +31,16 @@
 	width: 20%;
 	margin-bottom: 3%;
 }
+@media screen and (orientation:landscape) {
+	.image-break {
+		padding: 10vh;
+	}
+}
+@media screen and (orientation:portrait) {
+	.image-break {
+		margin-top: 5%;
+	}
+}
 </style>
 </head>
 <body>
@@ -38,7 +48,7 @@
 	<div class="post">
 	{{ if $e.MediaURLs }}
 	{{ range $i, $url := $e.MediaURLs }}
-		{{ if $i }}<div style="padding:10vh"></div>{{ end }}
+		{{ if $i }}<div class="image-break"></div>{{ end }}
 		<div>
 		<a href="{{ $url }}" target="_blank" rel="noopener noreferrer">
 			<img class="image" src="{{ $url }}"/>
