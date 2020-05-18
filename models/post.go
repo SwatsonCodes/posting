@@ -10,16 +10,18 @@ import (
 	"time"
 )
 
+const createdAtFmt = "2 Jan 2006 15:04"
+
 type Post struct {
-	ID        string   `json:"post_id" firestore:"post_id"`
-	Body      string   `json:"body" firestore:"body"`
-	MediaURLs []string `json:"media_urls,omitempty" firestore:"media_urls,omitempty"`
-	CreatedAt string   `json:"created_at" firestore:"created_at"`
+	ID        string    `json:"post_id" firestore:"post_id"`
+	Body      string    `json:"body" firestore:"body"`
+	MediaURLs []string  `json:"media_urls,omitempty" firestore:"media_urls,omitempty"`
+	CreatedAt time.Time `json:"created_at" firestore:"created_at"`
 }
 
 func ParsePost(form *url.Values) (post *Post, err error) {
 	var id, numMedia string
-	post = &Post{CreatedAt: time.Now().Format(time.RFC3339)}
+	post = &Post{CreatedAt: time.Now()}
 	if id = form.Get("SmsSid"); id == "" {
 		return nil, errors.New("SmsSid field not present")
 	}
@@ -61,4 +63,8 @@ func (post *Post) ResolveMediaURLs() {
 		}(i, url)
 	}
 	wg.Wait()
+}
+
+func (post *Post) FmtCreatedAt() string {
+	return post.CreatedAt.Format(createdAtFmt)
 }

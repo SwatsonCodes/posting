@@ -3,7 +3,6 @@ package models
 import (
 	"net/url"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -165,8 +164,6 @@ func TestDecodePost(t *testing.T) {
 		assert.Nil(t, err)
 		assert.Equal(t, testcase.id, post.ID)
 		assert.Equal(t, testcase.body, post.Body)
-		_, e := time.Parse(time.RFC3339, post.CreatedAt)
-		assert.Nil(t, e, "expected post timestamp to be in ISO format")
 		assert.Equal(t, testcase.mediaURLs, post.MediaURLs)
 	}
 }
