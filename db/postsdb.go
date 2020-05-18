@@ -1,6 +1,6 @@
 package db
 
-import "github.com/swatsoncodes/very-nice-website/models"
+import "github.com/swatsoncodes/posting/models"
 
 type PostsDB interface {
 	PutPost(post models.Post) (err error)

@@ -6,3 +6,9 @@ docker-firestore-run:
 
 docker-firestore-kill:
 	docker kill firestore_poster
+
+gcloud-deploy:
+	gcloud app deploy
+
+gcloud-logs:
+	gcloud app logs tail -s default

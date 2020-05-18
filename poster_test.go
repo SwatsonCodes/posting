@@ -10,8 +10,8 @@ import (
 	"text/template"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/swatsoncodes/very-nice-website/db"
-	"github.com/swatsoncodes/very-nice-website/models"
+	"github.com/swatsoncodes/posting/db"
+	"github.com/swatsoncodes/posting/models"
 )
 
 type mockPostsDB struct{ shouldErr bool }

@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"cloud.google.com/go/firestore"
-	"github.com/swatsoncodes/very-nice-website/models"
+	"github.com/swatsoncodes/posting/models"
 )
 
 type firestoreClient struct {

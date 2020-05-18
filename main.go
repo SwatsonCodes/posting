@@ -6,8 +6,8 @@ import (
 
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
-	"github.com/swatsoncodes/very-nice-website/db"
-	"github.com/swatsoncodes/very-nice-website/middleware"
+	"github.com/swatsoncodes/posting/db"
+	"github.com/swatsoncodes/posting/middleware"
 )
 
 const bodySizeLimit middleware.RequestBodyLimitBytes = 32 * 1024 // 32KiB

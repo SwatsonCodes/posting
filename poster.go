@@ -14,8 +14,8 @@ import (
 	"text/template"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/swatsoncodes/very-nice-website/db"
-	"github.com/swatsoncodes/very-nice-website/models"
+	"github.com/swatsoncodes/posting/db"
+	"github.com/swatsoncodes/posting/models"
 )
 
 const cowsay string = `

@@ -1,4 +1,4 @@
-module github.com/swatsoncodes/very-nice-website
+module github.com/swatsoncodes/posting
 
 go 1.14
 
