@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 
@@ -14,7 +15,7 @@ const bodySizeLimit middleware.RequestBodyLimitBytes = 32 * 1024 // 32KiB
 const collectionName = "posts"                                   // TODO: make this configurable
 
 func main() {
-	var sender, twilioToken, gcloudID string
+	var sender, twilioToken, gcloudID, port string
 	var ok bool
 	templatesPath := "templates"
 	log.SetFormatter(&log.JSONFormatter{DisableHTMLEscape: true})
@@ -28,6 +29,9 @@ func main() {
 	}
 	if gcloudID, ok = os.LookupEnv("GCLOUD_PROJECT_ID"); !ok {
 		log.Fatal("env var GCLOUD_PROJECT_ID not set")
+	}
+	if port, ok = os.LookupEnv("PORT"); !ok {
+		port = "8008"
 	}
 
 	postsDB, err := db.NewFirestoreClient(gcloudID, collectionName)
@@ -55,6 +59,6 @@ func main() {
 	if env := os.Getenv("POSTER_ENV"); env == "DEV" {
 		router.Use(middleware.LogRequestBody)
 	}
-	log.Info("serving on port 8080")
-	http.ListenAndServe(":8080", router)
+	log.Infof("serving on port %s", port)
+	http.ListenAndServe(fmt.Sprintf(":%s", port), router)
 }
