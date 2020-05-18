@@ -50,6 +50,7 @@ func GoAway(w http.ResponseWriter, r *http.Request) {
 }
 
 func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
+	// TODO: reply with twilio-friendly response
 	err := r.ParseForm()
 	if err != nil {
 		log.WithError(err).Warn("failed to parse form body")

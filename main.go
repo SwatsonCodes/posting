@@ -52,6 +52,9 @@ func main() {
 	router.NotFoundHandler = http.HandlerFunc(GoAway)
 
 	router.Use(middleware.LogRequest)
+	if env := os.Getenv("POSTER_ENV"); env == "DEV" {
+		router.Use(middleware.LogRequestBody)
+	}
 	log.Info("serving on port 8080")
 	http.ListenAndServe(":8080", router)
 }
