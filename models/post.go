@@ -18,22 +18,18 @@ type Post struct {
 }
 
 func ParsePost(form *url.Values) (post *Post, err error) {
-	var id, body, numMedia string
+	var id, numMedia string
 	post = &Post{CreatedAt: time.Now().Format(time.RFC3339)}
 	if id = form.Get("SmsSid"); id == "" {
 		return nil, errors.New("SmsSid field not present")
 	}
 	post.ID = id
 
-	if body = form.Get("Body"); body == "" {
-		return nil, errors.New("Body field not present")
-	}
-	post.Body = body
+	post.Body = form.Get("Body")
 
 	if numMedia = form.Get("NumMedia"); numMedia == "" {
 		return
 	}
-
 	nm, err := strconv.Atoi(numMedia)
 	if err != nil {
 		return nil, fmt.Errorf("NumMedia value '%s' could not be converted to integer", numMedia)

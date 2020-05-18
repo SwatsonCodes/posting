@@ -24,7 +24,8 @@ func TestDecodePost(t *testing.T) {
 			false,
 			"abc123",
 			"hello",
-			nil},
+			nil,
+		},
 		{
 			&url.Values{
 				"SmsSid":   []string{"abc123"},
@@ -34,7 +35,8 @@ func TestDecodePost(t *testing.T) {
 			false,
 			"abc123",
 			"hello",
-			nil},
+			nil,
+		},
 		{
 			&url.Values{
 				"SmsSid":    []string{"abc123"},
@@ -111,8 +113,8 @@ func TestDecodePost(t *testing.T) {
 			&url.Values{
 				"SmsSid": []string{"abc123"},
 			},
-			true,
-			"",
+			false,
+			"abc123",
 			"",
 			nil,
 		},
