@@ -3,11 +3,7 @@ package main
 import (
 	"net/http"
 	"os"
-	"path"
 
-	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-lambda-go/lambda"
-	"github.com/awslabs/aws-lambda-go-api-proxy/gorillamux"
 	"github.com/gorilla/mux"
 	log "github.com/sirupsen/logrus"
 	"github.com/swatsoncodes/very-nice-website/db"
@@ -17,15 +13,9 @@ import (
 const bodySizeLimit middleware.RequestBodyLimitBytes = 32 * 1024 // 32KiB
 const collectionName = "posts"                                   // TODO: make this configurable
 
-func isRunningInLambda() bool {
-	_, inLambda := os.LookupEnv("LAMBDA_TASK_ROOT")
-	return inLambda
-}
-
 func main() {
 	var sender, twilioToken, gcloudID string
 	var ok bool
-	inLambda := isRunningInLambda()
 	templatesPath := "templates"
 	log.SetFormatter(&log.JSONFormatter{DisableHTMLEscape: true})
 	log.Info("hello")
@@ -38,16 +28,6 @@ func main() {
 	}
 	if gcloudID, ok = os.LookupEnv("GCLOUD_PROJECT_ID"); !ok {
 		log.Fatal("env var GCLOUD_PROJECT_ID not set")
-	}
-
-	if inLambda {
-		task_root := os.Getenv("LAMBDA_TASK_ROOT")
-		os.Setenv("GOOGLE_APPLICATION_CREDENTIALS",
-			path.Join(
-				task_root,
-				"gcloud_poster_creds.json"),
-		)
-		templatesPath = path.Join(task_root, templatesPath)
 	}
 
 	postsDB, err := db.NewFirestoreClient(gcloudID, collectionName)
@@ -72,14 +52,6 @@ func main() {
 	router.NotFoundHandler = http.HandlerFunc(GoAway)
 
 	router.Use(middleware.LogRequest)
-	adapter := gorillamux.New(router)
-
-	if inLambda {
-		lambda.Start(func(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-			return adapter.Proxy(req)
-		})
-	} else {
-		log.Info("serving on port 8080")
-		http.ListenAndServe(":8080", router)
-	}
+	log.Info("serving on port 8080")
+	http.ListenAndServe(":8080", router)
 }
