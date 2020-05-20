@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"sync"
 	"text/template"
 
@@ -34,15 +35,16 @@ type Poster struct {
 	AllowedSender   string
 	TwilioAuthToken string
 	DB              *db.PostsDB
+	PageSize        int
 	PostsTemplate   *template.Template
 }
 
-func NewPoster(allowedSender, twilioAuthToken, templatesPath string, postsDB *db.PostsDB) (*Poster, error) {
+func NewPoster(allowedSender, twilioAuthToken, templatesPath string, pageSize int, postsDB *db.PostsDB) (*Poster, error) {
 	template, err := template.ParseFiles(filepath.Join(templatesPath, postsTemplate))
 	if err != nil {
 		return nil, err
 	}
-	return &Poster{allowedSender, twilioAuthToken, postsDB, template}, nil
+	return &Poster{allowedSender, twilioAuthToken, postsDB, pageSize, template}, nil
 }
 
 func GoAway(w http.ResponseWriter, r *http.Request) {
@@ -77,7 +79,7 @@ func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 	var wg sync.WaitGroup
 
-	posts, err := (*poster.DB).GetPosts()
+	posts, err := (*poster.DB).GetPosts(getOffset(r, poster.PageSize), poster.PageSize)
 	if err != nil {
 		log.WithError(err).Error("failed to get posts from db")
 		http.Error(w, "unable to retrieve posts", http.StatusInternalServerError)
@@ -98,6 +100,21 @@ func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unable to render posts html", http.StatusInternalServerError)
 		return
 	}
+}
+
+func getOffset(r *http.Request, pageSize int) (offset int) {
+	if page, ok := r.URL.Query()["page"]; ok {
+		if len(page) == 0 {
+			return
+		}
+		if p, err := strconv.Atoi(page[0]); err == nil {
+			if p < 0 {
+				return
+			}
+			return p * pageSize
+		}
+	}
+	return
 }
 
 func GetExpectedTwilioSignature(url, authToken string, postForm url.Values) (expectedTwilioSignature string) {

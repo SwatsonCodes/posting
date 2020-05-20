@@ -26,10 +26,12 @@ func (client *firestoreClient) PutPost(post models.Post) (err error) {
 	return
 }
 
-func (client *firestoreClient) GetPosts() (*[]models.Post, error) {
+func (client *firestoreClient) GetPosts(offset, limit int) (*[]models.Post, error) {
 	docs, err := client.posts.
 		Select("post_id", "body", "created_at", "media_urls").
 		OrderBy("created_at", firestore.Desc).
+		Offset(offset).
+		Limit(limit).
 		Documents(client.ctx).
 		GetAll()
 	if err != nil {

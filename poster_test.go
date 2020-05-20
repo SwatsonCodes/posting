@@ -23,7 +23,7 @@ func (m mockPostsDB) PutPost(post models.Post) (err error) {
 	return
 }
 
-func (m mockPostsDB) GetPosts() (posts *[]models.Post, err error) {
+func (m mockPostsDB) GetPosts(offset, limit int) (posts *[]models.Post, err error) {
 	if m.shouldErr {
 		return nil, errors.New("i am a failure")
 	}

@@ -13,6 +13,7 @@ import (
 
 const bodySizeLimit middleware.RequestBodyLimitBytes = 32 * 1024 // 32KiB
 const collectionName = "posts"                                   // TODO: make this configurable
+const pageSize = 5
 
 func main() {
 	var sender, twilioToken, gcloudID, port string
@@ -39,7 +40,7 @@ func main() {
 		log.WithError(err).Fatal("failed to initialize db")
 	}
 	var pdb db.PostsDB = postsDB
-	poster, err := NewPoster(sender, twilioToken, templatesPath, &pdb)
+	poster, err := NewPoster(sender, twilioToken, templatesPath, pageSize, &pdb)
 	router := mux.NewRouter()
 
 	router.Handle("/posts",
