@@ -23,11 +23,11 @@ func (m mockPostsDB) PutPost(post models.Post) (err error) {
 	return
 }
 
-func (m mockPostsDB) GetPosts(offset, limit int) (posts *[]models.Post, err error) {
+func (m mockPostsDB) GetPosts(offset, limit int) (posts *[]models.Post, isMore bool, err error) {
 	if m.shouldErr {
-		return nil, errors.New("i am a failure")
+		return nil, true, errors.New("i am a failure")
 	}
-	return &[]models.Post{models.Post{}}, nil
+	return &[]models.Post{models.Post{}}, true, nil
 }
 
 func TestGoAway(t *testing.T) {

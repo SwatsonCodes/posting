@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="https://newcss.net/lite.css">
 </head>
 <body>
-{{ range $e := . }}
+{{ range $e := .Posts }}
 	<div>
 	{{ if $e.MediaURLs }}
 	{{ range $i, $url := $e.MediaURLs }}
@@ -22,5 +22,14 @@
 	<hr>
 	</div>
 {{ end }}
+
+<nav>
+	{{ if gt .NextPage 0 }}
+	<span><a href="posts?page={{ .NextPage }}">&lt; older</a></span>
+	{{ end }}
+	{{ if gt .PrevPage -1 }}
+	<span style="float:right"><a href="posts?page={{ .PrevPage }}">newer &gt;</a></span>
+	{{ end }}
+</nav>
 </body>
 </html>

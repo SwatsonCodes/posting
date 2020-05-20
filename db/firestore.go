@@ -5,6 +5,7 @@ import (
 
 	"cloud.google.com/go/firestore"
 	"github.com/swatsoncodes/posting/models"
+	"google.golang.org/api/iterator"
 )
 
 type firestoreClient struct {
@@ -26,24 +27,37 @@ func (client *firestoreClient) PutPost(post models.Post) (err error) {
 	return
 }
 
-func (client *firestoreClient) GetPosts(offset, limit int) (*[]models.Post, error) {
-	docs, err := client.posts.
+func (client *firestoreClient) GetPosts(offset, limit int) (posts *[]models.Post, isMore bool, err error) {
+	var poasts []models.Post
+	isMore = true
+
+	docs := client.posts.
 		Select("post_id", "body", "created_at", "media_urls").
 		OrderBy("created_at", firestore.Desc).
 		Offset(offset).
-		Limit(limit).
-		Documents(client.ctx).
-		GetAll()
-	if err != nil {
-		return nil, err
-	}
+		Limit(limit + 1). // ask for one more so we can tell if we've reached the end
+		Documents(client.ctx)
+	defer docs.Stop()
 
-	posts := make([]models.Post, len(docs))
-	for i, doc := range docs {
-		if err = doc.DataTo(&posts[i]); err != nil {
-			return nil, err
+	for i := 0; i < limit; i++ {
+		var post models.Post
+		var doc *firestore.DocumentSnapshot
+		doc, err = docs.Next()
+		if err == iterator.Done {
+			return &poasts, false, nil
 		}
+		if err != nil {
+			return
+		}
+
+		if err = doc.DataTo(&post); err != nil {
+			return
+		}
+		poasts = append(poasts, post)
+	}
+	if _, err = docs.Next(); err == iterator.Done {
+		isMore = false
 	}
 
-	return &posts, nil
+	return &poasts, isMore, nil
 }

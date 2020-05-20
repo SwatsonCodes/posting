@@ -79,7 +79,8 @@ func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 	var wg sync.WaitGroup
 
-	posts, err := (*poster.DB).GetPosts(getOffset(r, poster.PageSize), poster.PageSize)
+	pageNum := getPageNum(r)
+	posts, isMore, err := (*poster.DB).GetPosts(pageNum*poster.PageSize, poster.PageSize)
 	if err != nil {
 		log.WithError(err).Error("failed to get posts from db")
 		http.Error(w, "unable to retrieve posts", http.StatusInternalServerError)
@@ -95,14 +96,27 @@ func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 	}
 	wg.Wait()
 
-	if err = poster.PostsTemplate.Execute(w, *posts); err != nil {
+	nextPage := -1
+	if isMore {
+		nextPage = pageNum + 1
+	}
+	templatePayload := struct {
+		Posts              []models.Post
+		NextPage, PrevPage int
+	}{
+		*posts,
+		nextPage,
+		pageNum - 1,
+	}
+
+	if err = poster.PostsTemplate.Execute(w, templatePayload); err != nil {
 		log.WithError(err).Error(err.Error())
 		http.Error(w, "unable to render posts html", http.StatusInternalServerError)
 		return
 	}
 }
 
-func getOffset(r *http.Request, pageSize int) (offset int) {
+func getPageNum(r *http.Request) (offset int) {
 	if page, ok := r.URL.Query()["page"]; ok {
 		if len(page) == 0 {
 			return
@@ -111,7 +125,7 @@ func getOffset(r *http.Request, pageSize int) (offset int) {
 			if p < 0 {
 				return
 			}
-			return p * pageSize
+			return p
 		}
 	}
 	return
