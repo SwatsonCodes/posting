@@ -53,6 +53,7 @@ func main() {
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/posts", http.StatusMovedPermanently)
 	}).Methods(http.MethodGet)
+	router.PathPrefix("/").Handler(http.FileServer(http.Dir("static/")))
 
 	router.NotFoundHandler = http.HandlerFunc(GoAway)
 
