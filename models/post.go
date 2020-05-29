@@ -3,11 +3,12 @@ package models
 import (
 	"errors"
 	"fmt"
-	"net/http"
 	"net/url"
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/swatsoncodes/posting/upstream/imgur"
 )
 
 const createdAtFmt = "2 Jan 2006 15:04"
@@ -51,18 +52,40 @@ func ParsePost(form *url.Values) (post *Post, err error) {
 	return
 }
 
-func (post *Post) ResolveMediaURLs() {
+func (post *Post) RehostImagesOnImgur(uploader imgur.Uploader) error {
 	var wg sync.WaitGroup
+	imgurURLs := make([]string, len(post.MediaURLs))
+	done := make(chan bool, 0)
+	errors := make(chan error, 1)
+
 	for i, url := range post.MediaURLs {
 		wg.Add(1)
 		go func(i int, url string) {
-			if resp, err := http.Get(url); err == nil {
-				post.MediaURLs[i] = resp.Request.URL.String()
+			imgurURL, err := uploader.UploadImage(url)
+			if err != nil {
+				errors <- err
+				return
 			}
+			imgurURLs[i] = imgurURL
 			wg.Done()
 		}(i, url)
 	}
-	wg.Wait()
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		break
+	case err := <-errors:
+		return err
+	}
+
+	for i, url := range imgurURLs {
+		post.MediaURLs[i] = url
+	}
+	return nil
 }
 
 func (post *Post) FmtCreatedAt() string {

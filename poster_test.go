@@ -121,24 +121,6 @@ func TestGetPosts(t *testing.T) {
 	}
 }
 
-func TestGetExpectedTwilioSignature(t *testing.T) {
-	// based on https://www.twilio.com/docs/security#validating-requests
-	_url := "https://mycompany.com/myapp.php?foo=1&bar=2"
-	authToken := "12345"
-	expectedSignature := "0/KCTR6DLpKmkAf8muzZqo1nDgQ="
-	postForm := url.Values{
-		"CallSid": {"CA1234567890ABCDE"},
-		"Caller":  {"+12349013030"},
-		"Digits":  {"1234"},
-		"From":    {"+12349013030"},
-		"To":      {"+18005551212"},
-	}
-
-	assert.Equal(t, expectedSignature, GetExpectedTwilioSignature(_url, authToken, postForm))
-	postForm["New"] = []string{"data"}
-	assert.NotEqual(t, expectedSignature, GetExpectedTwilioSignature(_url, authToken, postForm))
-}
-
 func TestIsRequestAuthorized(t *testing.T) {
 	// based on https://www.twilio.com/docs/security#validating-requests
 	poster := Poster{

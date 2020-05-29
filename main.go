@@ -11,12 +11,12 @@ import (
 	"github.com/swatsoncodes/posting/middleware"
 )
 
-const bodySizeLimit middleware.RequestBodyLimitBytes = 32 * 1024 // 32KiB
-const collectionName = "posts"                                   // TODO: make this configurable
+const bodySizeLimit middleware.RequestBodyLimitBytes = 2 * 1024 // 2KiB
+const collectionName = "posts"                                  // TODO: make this configurable
 const pageSize = 5
 
 func main() {
-	var sender, twilioToken, gcloudID, port string
+	var sender, twilioToken, imgurClientID, gcloudID, port string
 	var ok bool
 	templatesPath := "templates"
 	log.SetFormatter(&log.JSONFormatter{DisableHTMLEscape: true})
@@ -27,6 +27,9 @@ func main() {
 	}
 	if twilioToken, ok = os.LookupEnv("TWILIO_AUTH_TOKEN"); !ok {
 		log.Fatal("env var TWILIO_AUTH_TOKEN not set")
+	}
+	if imgurClientID, ok = os.LookupEnv("IMGUR_CLIENT_ID"); !ok {
+		log.Fatal("env var IMGUR_CLIENT_ID not set")
 	}
 	if gcloudID, ok = os.LookupEnv("GCLOUD_PROJECT_ID"); !ok {
 		log.Fatal("env var GCLOUD_PROJECT_ID not set")
@@ -40,7 +43,7 @@ func main() {
 		log.WithError(err).Fatal("failed to initialize db")
 	}
 	var pdb db.PostsDB = postsDB
-	poster, err := NewPoster(sender, twilioToken, templatesPath, pageSize, &pdb)
+	poster, err := NewPoster(sender, twilioToken, imgurClientID, templatesPath, pageSize, &pdb)
 	router := mux.NewRouter()
 
 	router.Handle("/posts",
