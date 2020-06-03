@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"path/filepath"
 	"strconv"
@@ -14,16 +13,6 @@ import (
 	"github.com/swatsoncodes/posting/upstream/twilio"
 )
 
-const cowsay string = `
- _____
-< no  >
- -----
-        \   ^__^
-         \  (oo)\_______
-            (__)\       )\/\
-                ||----w |
-                ||     ||
-`
 const postsTemplate string = "posts.html"
 
 type Poster struct {
@@ -41,10 +30,6 @@ func NewPoster(allowedSender, twilioAuthToken, imgurClientID, templatesPath stri
 		return nil, err
 	}
 	return &Poster{allowedSender, twilioAuthToken, imgur.Uploader{ClientID: imgurClientID}, postsDB, pageSize, template}, nil
-}
-
-func GoAway(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, cowsay)
 }
 
 func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {

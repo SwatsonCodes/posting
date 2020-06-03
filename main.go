@@ -58,8 +58,6 @@ func main() {
 	}).Methods(http.MethodGet)
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("static/")))
 
-	router.NotFoundHandler = http.HandlerFunc(GoAway)
-
 	router.Use(middleware.LogRequest)
 	if env := os.Getenv("POSTER_ENV"); env == "DEV" {
 		router.Use(middleware.LogRequestBody)
