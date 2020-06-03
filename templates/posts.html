@@ -10,6 +10,9 @@
 	</header>
 {{ range $e := .Posts }}
 	<div>
+	{{ if $e.Body }}
+	<div><p>{{ $e.Body }}</p></div>
+	{{ end }}
 	{{ if $e.MediaURLs }}
 	{{ range $i, $url := $e.MediaURLs }}
 		<div><center>
@@ -18,9 +21,6 @@
 		</a>
 		</center></div>
 	{{ end }}
-	{{ end }}
-	{{ if $e.Body }}
-	<div>{{ $e.Body }}</div>
 	{{ end }}
 	<small><i>{{ $e.FmtCreatedAt }}</i></small>
 	<hr>
