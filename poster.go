@@ -14,6 +14,9 @@ import (
 )
 
 const postsTemplate string = "posts.html"
+const badRequest, internalErr string = "🚮 bad post!", "🔥 internal error"
+
+var okay = []byte("👍")
 
 type Poster struct {
 	AllowedSender   string
@@ -37,37 +40,32 @@ func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		log.WithError(err).Warn("failed to parse form body")
-		http.Error(w, "unable to parse request form body", http.StatusBadRequest)
+		http.Error(w, badRequest, http.StatusBadRequest)
 		return
 	}
 
 	post, err := models.ParsePost(&r.PostForm)
 	if err != nil {
 		log.WithError(err).Warn("got bad post")
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		http.Error(w, badRequest, http.StatusBadRequest)
 		return
 	}
 
 	if err := post.RehostImagesOnImgur(poster.ImgurUploader); err != nil {
 		log.WithError(err).Error("failed to upload images to imgur")
-		http.Error(w, "unable to save post", http.StatusInternalServerError)
+		http.Error(w, internalErr, http.StatusInternalServerError)
 		return
 	}
 
 	if err := (*poster.DB).PutPost(*post); err != nil {
 		log.WithError(err).Error("failed to put post to DB")
-		http.Error(w, "unable to save post", http.StatusInternalServerError)
+		http.Error(w, internalErr, http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/xml")
+	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusCreated)
-	resp, err := twilio.FormatResponse("okay")
-	if err != nil {
-		log.WithError(err).Error("failed to format response")
-		return
-	}
-	w.Write(resp)
+	w.Write(okay)
 }
 
 func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
@@ -75,7 +73,7 @@ func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 	posts, isMore, err := (*poster.DB).GetPosts(pageNum*poster.PageSize, poster.PageSize)
 	if err != nil {
 		log.WithError(err).Error("failed to get posts from db")
-		http.Error(w, "unable to retrieve posts", http.StatusInternalServerError)
+		http.Error(w, internalErr, http.StatusInternalServerError)
 		return
 	}
 
@@ -94,7 +92,7 @@ func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 
 	if err = poster.PostsTemplate.Execute(w, templatePayload); err != nil {
 		log.WithError(err).Error(err.Error())
-		http.Error(w, "unable to render posts html", http.StatusInternalServerError)
+		http.Error(w, internalErr, http.StatusInternalServerError)
 		return
 	}
 }

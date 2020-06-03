@@ -5,7 +5,6 @@ import (
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/base64"
-	"encoding/xml"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -13,26 +12,6 @@ import (
 
 	log "github.com/sirupsen/logrus"
 )
-
-var xmlHead = []byte(`<?xml version="1.0" encoding="UTF-8"?>`)
-
-type response struct {
-	XMLName xml.Name `xml:"Response"`
-	Message message
-}
-
-type message struct {
-	Body string
-}
-
-func FormatResponse(body string) (resp []byte, err error) {
-	r := &response{Message: message{Body: body}}
-	resp, err = xml.Marshal(r)
-	if err != nil {
-		return
-	}
-	return append(xmlHead, resp...), nil
-}
 
 func GetExpectedTwilioSignature(url, authToken string, postForm url.Values) (expectedTwilioSignature string) {
 	var i int
