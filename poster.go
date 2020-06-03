@@ -59,8 +59,15 @@ func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unable to save post", http.StatusInternalServerError)
 		return
 	}
-	w.Header().Set("Content-Type", "text/plain")
+
+	w.Header().Set("Content-Type", "text/xml")
 	w.WriteHeader(http.StatusCreated)
+	resp, err := twilio.FormatResponse("okay")
+	if err != nil {
+		log.WithError(err).Error("failed to format response")
+		return
+	}
+	w.Write(resp)
 }
 
 func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {

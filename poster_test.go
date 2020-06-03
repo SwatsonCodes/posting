@@ -30,16 +30,6 @@ func (m mockPostsDB) GetPosts(offset, limit int) (posts *[]models.Post, isMore b
 	return &[]models.Post{models.Post{}}, true, nil
 }
 
-func TestGoAway(t *testing.T) {
-	req, _ := http.NewRequest(http.MethodGet, "/test", nil)
-	rr := httptest.NewRecorder()
-	handler := http.HandlerFunc(GoAway)
-	handler.ServeHTTP(rr, req)
-
-	assert.Equal(t, rr.Body.String(), cowsay)
-	assert.Equal(t, rr.Code, http.StatusOK)
-}
-
 func TestCreatePost(t *testing.T) {
 	var happyDB db.PostsDB = mockPostsDB{shouldErr: false}
 	var sadDB db.PostsDB = mockPostsDB{shouldErr: true}
