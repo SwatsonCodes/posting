@@ -1,36 +1,50 @@
-package main
+package poster
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"text/template"
+	"time"
 
 	log "github.com/sirupsen/logrus"
-	"github.com/swatsoncodes/posting/db"
-	"github.com/swatsoncodes/posting/models"
 	"github.com/swatsoncodes/posting/upstream/imgur"
 	"github.com/swatsoncodes/posting/upstream/twilio"
 )
 
 const postsTemplate string = "posts.html"
+const createdAtFmt = "2 Jan 2006 15:04"
 const okay, badRequest, internalErr string = "👍", "🚮 bad post!", "🔥 internal error"
 
 // Poster is the primary class of the blog.
 // It holds the necessary data to communicate with 3rd party APIs and render HTML templates.
 // A Poster creates new Posts by receiving incoming webook requests from Twilio and storing them in the DB.
-// It can display those Posts by retreiving them from the DB and rendering them in a nice HTML template
+// It can display those Posts by retreiving them from the DB and rendering them in an HTML template
 type Poster struct {
 	AllowedSender   string // sole phone number allowed to create new posts
 	TwilioAuthToken string
 	ImgurUploader   imgur.Uploader // used for rehosting images on Imgur
-	DB              *db.PostsDB
+	DB              *PostsDB
 	PageSize        int                // number of posts to display on a single page
 	PostsTemplate   *template.Template // html template for rendering Posts
 }
 
+// Post represents a single Post received from Twilio which originated from my phone via SMS
+// Normally the Post struct and its associated methods live in their own file in a "models" package to keep things tidy and organized,
+// but for the purposes of my Thorn application I've merged it into poster.go to provide a larger code sample.
+type Post struct {
+	ID        string    `json:"post_id" firestore:"post_id"`
+	Body      string    `json:"body" firestore:"body"`
+	MediaURLs []string  `json:"media_urls,omitempty" firestore:"media_urls,omitempty"`
+	CreatedAt time.Time `json:"created_at" firestore:"created_at"`
+}
+
 // NewPoster creates a new Poster
-func NewPoster(allowedSender, twilioAuthToken, imgurClientID, templatesPath string, pageSize int, postsDB *db.PostsDB) (*Poster, error) {
+func NewPoster(allowedSender, twilioAuthToken, imgurClientID, templatesPath string, pageSize int, postsDB *PostsDB) (*Poster, error) {
 	template, err := template.ParseFiles(filepath.Join(templatesPath, postsTemplate))
 	if err != nil {
 		return nil, err
@@ -51,7 +65,7 @@ func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	post, err := models.ParsePost(&r.PostForm)
+	post, err := ParsePost(&r.PostForm)
 	if err != nil {
 		log.WithError(err).Warn("got bad post")
 		http.Error(w, badRequest, http.StatusBadRequest)
@@ -78,8 +92,8 @@ func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 // GetPosts retrieves Posts from the DB and renders them using the HTML template.
 // It uses the "page" URL query param to determine which Posts to display
 func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
-	pageNum := getPageNum(r)
-	posts, isMore, err := (*poster.DB).GetPosts(pageNum*poster.PageSize, poster.PageSize)
+	curPage := getPageNum(r)
+	posts, isMore, err := (*poster.DB).GetPosts(curPage*poster.PageSize, poster.PageSize)
 	if err != nil {
 		log.WithError(err).Error("failed to get posts from db")
 		http.Error(w, internalErr, http.StatusInternalServerError)
@@ -90,15 +104,15 @@ func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 	// If NextPage or PrevPage are < 0, it indicates there are no older or newer posts to fetch, respectively
 	nextPage := -1
 	if isMore {
-		nextPage = pageNum + 1
+		nextPage = curPage + 1
 	}
 	templatePayload := struct {
-		Posts              []models.Post
+		Posts              []Post
 		NextPage, PrevPage int
 	}{
 		*posts,
 		nextPage,
-		pageNum - 1,
+		curPage - 1,
 	}
 
 	if err = poster.PostsTemplate.Execute(w, templatePayload); err != nil {
@@ -112,6 +126,86 @@ func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 // it is intended to be configured as middleware by the server to protect the CreatePost endpoint (or any endpoint that should only be hit by Twilio)
 func (poster Poster) IsRequestAuthorized(r *http.Request) bool {
 	return twilio.IsRequestSigned(r, poster.TwilioAuthToken) && r.PostForm.Get("From") == poster.AllowedSender
+}
+
+// ParsePost attempts to deserialize an HTTP POST form into a Post object
+// If the POST form or its fields are not well-formed, ParsePost returns an error
+func ParsePost(form *url.Values) (post *Post, err error) {
+	var id, numMedia string
+	post = &Post{CreatedAt: time.Now()}
+	if id = form.Get("SmsSid"); id == "" {
+		return nil, errors.New("SmsSid field not present")
+	}
+	post.ID = id
+
+	post.Body = form.Get("Body")
+
+	if numMedia = form.Get("NumMedia"); numMedia == "" {
+		return
+	}
+	nm, err := strconv.Atoi(numMedia)
+	if err != nil {
+		return nil, fmt.Errorf("NumMedia value '%s' could not be converted to integer", numMedia)
+	}
+	if nm <= 0 {
+		return
+	}
+	mediaURLs := make([]string, nm)
+	for i := 0; i < nm; i++ {
+		if mediaURL := form.Get(fmt.Sprintf("MediaUrl%d", i)); mediaURL != "" {
+			mediaURLs[i] = mediaURL
+			continue
+		}
+		return nil, fmt.Errorf("NumMedia claims '%d' MediaURLs are present, but fewer were found", nm)
+	}
+	post.MediaURLs = mediaURLs
+	return
+}
+
+// RehostImagesOnImgur uploads a Post's associated images to Imgur and replaces its MediaURLs with the new Imgur URLs.
+// Rehosting images on Imgur gives better latency than leeching off Twilio's CDN and avoids exposing our Twilio public key.
+// Images are uploaded to Imgur asynchronously. If an image cannot be uploaded we exit immediately with an error.
+// The Post's MediaURLs are not updated unless all uploads succeed.
+func (post *Post) RehostImagesOnImgur(uploader imgur.Uploader) error {
+	var wg sync.WaitGroup
+	imgurURLs := make([]string, len(post.MediaURLs))
+	done := make(chan bool, 0)
+	errors := make(chan error, 1)
+
+	for i, url := range post.MediaURLs {
+		wg.Add(1)
+		go func(i int, url string) {
+			imgurURL, err := uploader.UploadImage(url)
+			if err != nil {
+				errors <- err
+				return
+			}
+			imgurURLs[i] = imgurURL
+			wg.Done()
+		}(i, url)
+	}
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	// wait until all images finish uploading, or exit immediately if we encounter an error
+	select {
+	case <-done:
+		break
+	case err := <-errors:
+		return err
+	}
+
+	for i, url := range imgurURLs {
+		post.MediaURLs[i] = url
+	}
+	return nil
+}
+
+// FmtCreatedAt formats a Post's CreatedAt timestamp to a human-readable string
+func (post *Post) FmtCreatedAt() string {
+	return post.CreatedAt.Format(createdAtFmt)
 }
 
 // getPageNum determines which page number the requester wants using the "page" URL query param

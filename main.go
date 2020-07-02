@@ -9,6 +9,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/swatsoncodes/posting/db"
 	"github.com/swatsoncodes/posting/middleware"
+	"github.com/swatsoncodes/posting/poster"
 )
 
 const bodySizeLimit middleware.RequestBodyLimitBytes = 2 * 1024 // 2KiB
@@ -42,8 +43,8 @@ func main() {
 	if err != nil {
 		log.WithError(err).Fatal("failed to initialize db")
 	}
-	var pdb db.PostsDB = postsDB
-	poster, err := NewPoster(sender, twilioToken, imgurClientID, templatesPath, pageSize, &pdb)
+	var pdb poster.PostsDB = postsDB
+	poster, err := poster.NewPoster(sender, twilioToken, imgurClientID, templatesPath, pageSize, &pdb)
 	router := mux.NewRouter()
 
 	router.Handle("/posts",

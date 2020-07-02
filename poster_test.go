@@ -10,33 +10,32 @@ import (
 	"text/template"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/swatsoncodes/posting/db"
-	"github.com/swatsoncodes/posting/models"
+	"github.com/swatsoncodes/posting/poster"
 )
 
 type mockPostsDB struct{ shouldErr bool }
 
-func (m mockPostsDB) PutPost(post models.Post) (err error) {
+func (m mockPostsDB) PutPost(post poster.Post) (err error) {
 	if m.shouldErr {
 		return errors.New("i am a failure")
 	}
 	return
 }
 
-func (m mockPostsDB) GetPosts(offset, limit int) (posts *[]models.Post, isMore bool, err error) {
+func (m mockPostsDB) GetPosts(offset, limit int) (posts *[]poster.Post, isMore bool, err error) {
 	if m.shouldErr {
 		return nil, true, errors.New("i am a failure")
 	}
-	return &[]models.Post{models.Post{}}, true, nil
+	return &[]poster.Post{poster.Post{}}, true, nil
 }
 
 func TestCreatePost(t *testing.T) {
-	var happyDB db.PostsDB = mockPostsDB{shouldErr: false}
-	var sadDB db.PostsDB = mockPostsDB{shouldErr: true}
+	var happyDB poster.PostsDB = mockPostsDB{shouldErr: false}
+	var sadDB poster.PostsDB = mockPostsDB{shouldErr: true}
 	testcases := []struct {
 		body        string
 		contentType string
-		db          *db.PostsDB
+		poster      *poster.PostsDB
 		statusCode  int
 	}{
 		{
@@ -78,7 +77,7 @@ func TestCreatePost(t *testing.T) {
 	}
 
 	for _, testcase := range testcases {
-		poster := Poster{DB: testcase.db}
+		poster := poster.Poster{DB: testcase.poster}
 		req, _ := http.NewRequest(http.MethodPost, "/test", strings.NewReader(testcase.body))
 		req.Header.Set("Content-Type", testcase.contentType)
 		rr := httptest.NewRecorder()
@@ -91,10 +90,10 @@ func TestCreatePost(t *testing.T) {
 }
 
 func TestGetPosts(t *testing.T) {
-	var happyDB db.PostsDB = mockPostsDB{shouldErr: false}
-	var sadDB db.PostsDB = mockPostsDB{shouldErr: true}
+	var happyDB poster.PostsDB = mockPostsDB{shouldErr: false}
+	var sadDB poster.PostsDB = mockPostsDB{shouldErr: true}
 	testcases := []struct {
-		db         *db.PostsDB
+		poster     *poster.PostsDB
 		statusCode int
 	}{
 		{&happyDB, http.StatusOK},
@@ -102,7 +101,7 @@ func TestGetPosts(t *testing.T) {
 	}
 
 	for _, testcase := range testcases {
-		poster := Poster{DB: testcase.db, PostsTemplate: template.Must(template.ParseFiles("templates/posts.html"))}
+		poster := poster.Poster{DB: testcase.poster, PostsTemplate: template.Must(template.ParseFiles("templates/posts.html"))}
 		req, _ := http.NewRequest(http.MethodGet, "/test", nil)
 		rr := httptest.NewRecorder()
 		handler := http.HandlerFunc(poster.GetPosts)
@@ -113,7 +112,7 @@ func TestGetPosts(t *testing.T) {
 
 func TestIsRequestAuthorized(t *testing.T) {
 	// based on https://www.twilio.com/docs/security#validating-requests
-	poster := Poster{
+	poster := poster.Poster{
 		TwilioAuthToken: "12345",
 	}
 	_url := "https://mycompany.com/myapp.php?foo=1&bar=2"

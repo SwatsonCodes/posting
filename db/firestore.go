@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"cloud.google.com/go/firestore"
-	"github.com/swatsoncodes/posting/models"
+	"github.com/swatsoncodes/posting/poster"
 	"google.golang.org/api/iterator"
 )
 
@@ -22,13 +22,13 @@ func NewFirestoreClient(projectID, postsCollectionName string) (client *firestor
 	return &firestoreClient{ctx, fc.Collection(postsCollectionName)}, nil
 }
 
-func (client *firestoreClient) PutPost(post models.Post) (err error) {
+func (client *firestoreClient) PutPost(post poster.Post) (err error) {
 	_, err = client.posts.Doc(post.ID).Create(client.ctx, post)
 	return
 }
 
-func (client *firestoreClient) GetPosts(offset, limit int) (posts *[]models.Post, isMore bool, err error) {
-	var poasts []models.Post
+func (client *firestoreClient) GetPosts(offset, limit int) (posts *[]poster.Post, isMore bool, err error) {
+	var poasts []poster.Post
 	isMore = true
 
 	docs := client.posts.
@@ -40,7 +40,7 @@ func (client *firestoreClient) GetPosts(offset, limit int) (posts *[]models.Post
 	defer docs.Stop()
 
 	for i := 0; i < limit; i++ {
-		var post models.Post
+		var post poster.Post
 		var doc *firestore.DocumentSnapshot
 		doc, err = docs.Next()
 		if err == iterator.Done {
