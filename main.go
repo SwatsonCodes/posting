@@ -44,7 +44,7 @@ func main() {
 	}
 	var pdb db.PostsDB = postsDB
 	poster, err := NewPoster(sender, twilioToken, imgurClientID, templatesPath, pageSize, &pdb)
-	router := mux.NewRouter()
+	router := mux.NewRouter().StrictSlash(true)
 
 	router.Handle("/posts",
 		bodySizeLimit.LimitRequestBody( // guard against giant posts
