@@ -22,21 +22,19 @@ const okay, badRequest, internalErr string = "👍", "🚮 bad post!", "🔥 int
 // A Poster creates new Posts by receiving incoming webook requests from Twilio and storing them in the DB.
 // It can display those Posts by retreiving them from the DB and rendering them in a nice HTML template
 type Poster struct {
-	AllowedSender   string // sole phone number allowed to create new posts
-	TwilioAuthToken string
-	ImgurUploader   imgur.Uploader // used for rehosting images on Imgur
-	DB              *db.PostsDB
-	PageSize        int                // number of posts to display on a single page
-	PostsTemplate   *template.Template // html template for rendering Posts
+	ImgurUploader imgur.Uploader // used for rehosting images on Imgur
+	DB            *db.PostsDB
+	PageSize      int                // number of posts to display on a single page
+	PostsTemplate *template.Template // html template for rendering Posts
 }
 
 // NewPoster creates a new Poster
-func NewPoster(allowedSender, twilioAuthToken, imgurClientID, templatesPath string, pageSize int, postsDB *db.PostsDB) (*Poster, error) {
+func NewPoster(imgurClientID, templatesPath string, pageSize int, postsDB *db.PostsDB) (*Poster, error) {
 	template, err := template.ParseFiles(filepath.Join(templatesPath, postsTemplate))
 	if err != nil {
 		return nil, err
 	}
-	return &Poster{allowedSender, twilioAuthToken, imgur.Uploader{ClientID: imgurClientID}, postsDB, pageSize, template}, nil
+	return &Poster{imgur.Uploader{ClientID: imgurClientID}, postsDB, pageSize, template}, nil
 }
 
 // CreatePost creates a new Post by

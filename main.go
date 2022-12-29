@@ -16,18 +16,12 @@ const collectionName = "posts"                                  // TODO: make th
 const pageSize = 5
 
 func main() {
-	var sender, twilioToken, imgurClientID, gcloudID, port string
+	var imgurClientID, gcloudID, port string
 	var ok bool
 	templatesPath := "templates"
 	log.SetFormatter(&log.JSONFormatter{DisableHTMLEscape: true})
 	log.Info("hello")
 
-	if sender, ok = os.LookupEnv("ALLOWED_SENDER"); !ok {
-		log.Fatal("env var ALLOWED_SENDER not set")
-	}
-	if twilioToken, ok = os.LookupEnv("TWILIO_AUTH_TOKEN"); !ok {
-		log.Fatal("env var TWILIO_AUTH_TOKEN not set")
-	}
 	if imgurClientID, ok = os.LookupEnv("IMGUR_CLIENT_ID"); !ok {
 		log.Fatal("env var IMGUR_CLIENT_ID not set")
 	}
@@ -43,7 +37,7 @@ func main() {
 		log.WithError(err).Fatal("failed to initialize db")
 	}
 	var pdb db.PostsDB = postsDB
-	poster, err := NewPoster(sender, twilioToken, imgurClientID, templatesPath, pageSize, &pdb)
+	poster, err := NewPoster(imgurClientID, templatesPath, pageSize, &pdb)
 	router := mux.NewRouter().StrictSlash(true)
 
 	router.Handle("/posts",
