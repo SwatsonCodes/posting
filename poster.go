@@ -40,10 +40,7 @@ func NewPoster(allowedSender, twilioAuthToken, imgurClientID, templatesPath stri
 }
 
 // CreatePost creates a new Post by
-//  1) parsing it from an HTTP POST form sent via Twilio webhook
-//  2) rehosting the images associated with the Post (if any) on Imgur
-//  3) saving the Post data to the DB
-// The response it writes is forwarded to the sender's phone thanks to Twilio
+// TODO: update documentation
 func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
@@ -59,6 +56,7 @@ func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// TODO: move into parser
 	if err := post.RehostImagesOnImgur(poster.ImgurUploader); err != nil {
 		log.WithError(err).Error("failed to upload images to imgur")
 		http.Error(w, internalErr, http.StatusInternalServerError)
@@ -71,9 +69,7 @@ func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(okay))
+	poster.GetPosts(w, r)
 }
 
 // GetPosts retrieves Posts from the DB and renders them using the HTML template.
