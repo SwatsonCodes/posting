@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<h2>New Post</h2>
+
+<form action="/posts" method="post">
+  <label for="Body">Body</label><br>
+  <input type="text" id="Body" name="Body"><br>
+  <input type="submit" value="POST">
+</form>
+
+</body>
+</html>
+

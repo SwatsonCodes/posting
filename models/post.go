@@ -1,12 +1,11 @@
 package models
 
 import (
-	"errors"
-	"fmt"
 	"net/url"
-	"strconv"
 	"sync"
 	"time"
+
+	"github.com/google/uuid"
 
 	"github.com/swatsoncodes/posting/upstream/imgur"
 )
@@ -21,34 +20,8 @@ type Post struct {
 }
 
 func ParsePost(form *url.Values) (post *Post, err error) {
-	var id, numMedia string
-	post = &Post{CreatedAt: time.Now()}
-	if id = form.Get("SmsSid"); id == "" {
-		return nil, errors.New("SmsSid field not present")
-	}
-	post.ID = id
-
+	post = &Post{CreatedAt: time.Now(), ID: uuid.New().String()}
 	post.Body = form.Get("Body")
-
-	if numMedia = form.Get("NumMedia"); numMedia == "" {
-		return
-	}
-	nm, err := strconv.Atoi(numMedia)
-	if err != nil {
-		return nil, fmt.Errorf("NumMedia value '%s' could not be converted to integer", numMedia)
-	}
-	if nm <= 0 {
-		return
-	}
-	mediaURLs := make([]string, nm)
-	for i := 0; i < nm; i++ {
-		if mediaURL := form.Get(fmt.Sprintf("MediaUrl%d", i)); mediaURL != "" {
-			mediaURLs[i] = mediaURL
-			continue
-		}
-		return nil, fmt.Errorf("NumMedia claims '%d' MediaURLs are present, but fewer were found", nm)
-	}
-	post.MediaURLs = mediaURLs
 	return
 }
 

@@ -10,10 +10,11 @@ import (
 	"github.com/swatsoncodes/posting/db"
 	"github.com/swatsoncodes/posting/models"
 	"github.com/swatsoncodes/posting/upstream/imgur"
-	"github.com/swatsoncodes/posting/upstream/twilio"
 )
 
 const postsTemplate string = "posts.html"
+
+// TODO: get rid of these
 const okay, badRequest, internalErr string = "👍", "🚮 bad post!", "🔥 internal error"
 
 // Poster is the primary class of the blog.
@@ -111,7 +112,9 @@ func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 // IsRequestAuthorized determines if an incoming request originates from Twilio by checking the request signature
 // it is intended to be configured as middleware by the server to protect the CreatePost endpoint (or any endpoint that should only be hit by Twilio)
 func (poster Poster) IsRequestAuthorized(r *http.Request) bool {
-	return twilio.IsRequestSigned(r, poster.TwilioAuthToken) && r.PostForm.Get("From") == poster.AllowedSender
+	// TODO: basic auth
+	//return twilio.IsRequestSigned(r, poster.TwilioAuthToken) && r.PostForm.Get("From") == poster.AllowedSender
+	return true
 }
 
 // getPageNum determines which page number the requester wants using the "page" URL query param
