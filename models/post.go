@@ -1,13 +1,11 @@
 package models
 
 import (
-	"net/url"
+	"mime/multipart"
 	"sync"
 	"time"
 
 	"github.com/google/uuid"
-
-	"github.com/swatsoncodes/posting/upstream/imgur"
 )
 
 const createdAtFmt = "2 Jan 2006 15:04"
@@ -15,33 +13,61 @@ const createdAtFmt = "2 Jan 2006 15:04"
 type Post struct {
 	ID        string    `json:"post_id" firestore:"post_id"`
 	Body      string    `json:"body" firestore:"body"`
-	MediaURLs []string  `json:"media_urls,omitempty" firestore:"media_urls,omitempty"`
+	MediaURLs *[]string `json:"media_urls,omitempty" firestore:"media_urls,omitempty"`
 	CreatedAt time.Time `json:"created_at" firestore:"created_at"`
+	media     *[]multipart.File
 }
 
-func ParsePost(form *url.Values) (post *Post, err error) {
+type Uploader interface {
+	UploadMedia(media multipart.File) (mediaURL string, err error)
+}
+
+func ParsePost(form *multipart.Form) (post *Post, err error) {
 	post = &Post{CreatedAt: time.Now(), ID: uuid.New().String()}
-	post.Body = form.Get("Body")
+	if bod, ok := form.Value["Body"]; ok {
+		post.Body = bod[0]
+	}
+
+	if images, ok := form.File["Pics"]; ok {
+		media := make([]multipart.File, len(images))
+		// TODO: do this in parallel
+		for i, image := range images {
+			//TODO: validate media filetype
+			//TODO: validate media file size
+
+			f, err := image.Open()
+			if err != nil {
+				return nil, err
+			}
+			media[i] = f
+		}
+		post.media = &media
+	}
+
 	return
 }
 
-func (post *Post) RehostImagesOnImgur(uploader imgur.Uploader) error {
+func (post *Post) UploadMedia(uploader Uploader) error {
+	if post.media == nil {
+		return nil
+	}
+
 	var wg sync.WaitGroup
-	imgurURLs := make([]string, len(post.MediaURLs))
+	mediaURLs := make([]string, len(*post.media))
 	done := make(chan bool, 0)
 	errors := make(chan error, 1)
 
-	for i, url := range post.MediaURLs {
+	for i, f := range *(post.media) {
 		wg.Add(1)
-		go func(i int, url string) {
-			imgurURL, err := uploader.UploadImage(url)
+		go func(i int, f multipart.File) {
+			url, err := uploader.UploadMedia(f)
 			if err != nil {
 				errors <- err
 				return
 			}
-			imgurURLs[i] = imgurURL
+			mediaURLs[i] = url
 			wg.Done()
-		}(i, url)
+		}(i, f)
 	}
 	go func() {
 		wg.Wait()
@@ -55,9 +81,7 @@ func (post *Post) RehostImagesOnImgur(uploader imgur.Uploader) error {
 		return err
 	}
 
-	for i, url := range imgurURLs {
-		post.MediaURLs[i] = url
-	}
+	post.MediaURLs = &mediaURLs
 	return nil
 }
 

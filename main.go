@@ -11,8 +11,8 @@ import (
 	"github.com/swatsoncodes/posting/middleware"
 )
 
-const bodySizeLimit middleware.RequestBodyLimitBytes = 2 * 1024 // 2KiB
-const collectionName = "posts"                                  // TODO: make this configurable
+const bodySizeLimit middleware.RequestBodyLimitBytes = 32<<20 + 512 // TODO: how big is this?
+const collectionName = "posts"                                      // TODO: make this configurable
 const pageSize = 5
 
 func main() {
@@ -44,8 +44,8 @@ func main() {
 		bodySizeLimit.LimitRequestBody( // guard against giant posts
 			middleware.AuthChecker(poster.IsRequestAuthorized).CheckAuth( // make sure posters are authorized
 				http.HandlerFunc(poster.CreatePost)))).
-		Methods(http.MethodPost).
-		Headers("Content-Type", "application/x-www-form-urlencoded")
+		Methods(http.MethodPost)
+		//Headers("Content-Type", "multipart/form-data")
 	router.HandleFunc("/posts", poster.GetPosts).Methods(http.MethodGet)
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/posts", http.StatusMovedPermanently)

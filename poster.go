@@ -40,22 +40,22 @@ func NewPoster(imgurClientID, templatesPath string, pageSize int, postsDB *db.Po
 // CreatePost creates a new Post by
 // TODO: update documentation
 func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
+	r.Body = http.MaxBytesReader(w, r.Body, 32<<20+512) // TODO: this may not be necessary due to middleware
+	err := r.ParseMultipartForm(32 << 20)               // TODO don't hardcode this
 	if err != nil {
 		log.WithError(err).Warn("unable to parse form body")
 		http.Error(w, badRequest, http.StatusBadRequest)
 		return
 	}
 
-	post, err := models.ParsePost(&r.PostForm)
+	post, err := models.ParsePost(r.MultipartForm)
 	if err != nil {
 		log.WithError(err).Warn("got bad post")
 		http.Error(w, badRequest, http.StatusBadRequest)
 		return
 	}
 
-	// TODO: move into parser
-	if err := post.RehostImagesOnImgur(poster.ImgurUploader); err != nil {
+	if err := post.UploadMedia(poster.ImgurUploader); err != nil {
 		log.WithError(err).Error("failed to upload images to imgur")
 		http.Error(w, internalErr, http.StatusInternalServerError)
 		return
