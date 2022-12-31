@@ -13,16 +13,14 @@ import (
 )
 
 const postsTemplate string = "posts.html"
-
-// TODO: get rid of these
-const okay, badRequest, internalErr string = "👍", "🚮 bad post!", "🔥 internal error"
+const badRequest, internalErr string = "🚮 bad post!", "🔥 internal error"
 
 // Poster is the primary class of the blog.
 // It holds the necessary data to communicate with 3rd party APIs and render HTML templates.
 // A Poster creates new Posts by receiving incoming webook requests from Twilio and storing them in the DB.
 // It can display those Posts by retreiving them from the DB and rendering them in a nice HTML template
 type Poster struct {
-	ImgurUploader imgur.Uploader // used for rehosting images on Imgur
+	Uploader      models.Uploader // used for uploading media to external host
 	DB            *db.PostsDB
 	PageSize      int                // number of posts to display on a single page
 	PostsTemplate *template.Template // html template for rendering Posts
@@ -40,8 +38,7 @@ func NewPoster(imgurClientID, templatesPath string, pageSize int, postsDB *db.Po
 // CreatePost creates a new Post by
 // TODO: update documentation
 func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
-	r.Body = http.MaxBytesReader(w, r.Body, 32<<20+512) // TODO: this may not be necessary due to middleware
-	err := r.ParseMultipartForm(32 << 20)               // TODO don't hardcode this
+	err := r.ParseMultipartForm(32 << 20) // TODO don't hardcode this
 	if err != nil {
 		log.WithError(err).Warn("unable to parse form body")
 		http.Error(w, badRequest, http.StatusBadRequest)
@@ -55,7 +52,7 @@ func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := post.UploadMedia(poster.ImgurUploader); err != nil {
+	if err := post.UploadMedia(poster.Uploader); err != nil {
 		log.WithError(err).Error("failed to upload images to imgur")
 		http.Error(w, internalErr, http.StatusInternalServerError)
 		return
