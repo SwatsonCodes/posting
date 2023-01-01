@@ -1,6 +1,7 @@
 package models
 
 import (
+	"io"
 	"mime/multipart"
 	"sync"
 	"time"
@@ -13,37 +14,37 @@ const createdAtFmt = "2 Jan 2006 15:04"
 type Post struct {
 	ID        string    `json:"post_id" firestore:"post_id"`
 	Body      string    `json:"body" firestore:"body"`
-	MediaURLs *[]string `json:"media_urls,omitempty" firestore:"media_urls,omitempty"`
 	CreatedAt time.Time `json:"created_at" firestore:"created_at"`
-	media     *[]multipart.File
+	MediaURLs []string  `json:"media_urls,omitempty" firestore:"media_urls,omitempty"`
+	media     []io.Reader
 }
 
 type Uploader interface {
-	UploadMedia(media multipart.File) (mediaURL string, err error)
+	UploadMedia(media io.Reader) (mediaURL string, err error)
 }
 
-func ParsePost(form *multipart.Form) (post *Post, err error) {
-	post = &Post{CreatedAt: time.Now(), ID: uuid.New().String()}
+func ParsePost(form multipart.Form) (post *Post, err error) {
+	post = &Post{
+		CreatedAt: time.Now(),
+		ID:        uuid.New().String(),
+	}
 	if bod, ok := form.Value["Body"]; ok {
 		post.Body = bod[0]
 	}
 
-	if images, ok := form.File["Pics"]; ok {
-		media := make([]multipart.File, len(images))
-		// TODO: do this in parallel
-		for i, image := range images {
+	if pics, ok := form.File["Pics"]; ok {
+		media := make([]io.Reader, len(pics))
+		for i, pic := range pics {
 			//TODO: validate media filetype
 			//TODO: validate media file size
-
-			f, err := image.Open()
+			f, err := pic.Open()
 			if err != nil {
 				return nil, err
 			}
 			media[i] = f
 		}
-		post.media = &media
+		post.media = media
 	}
-
 	return
 }
 
@@ -53,21 +54,21 @@ func (post *Post) UploadMedia(uploader Uploader) error {
 	}
 
 	var wg sync.WaitGroup
-	mediaURLs := make([]string, len(*post.media))
+	mediaURLs := make([]string, len(post.media))
 	done := make(chan bool, 0)
 	errors := make(chan error, 1)
 
-	for i, f := range *(post.media) {
+	for i, media := range post.media {
 		wg.Add(1)
-		go func(i int, f multipart.File) {
-			url, err := uploader.UploadMedia(f)
+		go func(i int, m io.Reader) {
+			url, err := uploader.UploadMedia(m)
 			if err != nil {
 				errors <- err
 				return
 			}
 			mediaURLs[i] = url
 			wg.Done()
-		}(i, f)
+		}(i, media)
 	}
 	go func() {
 		wg.Wait()
@@ -81,7 +82,7 @@ func (post *Post) UploadMedia(uploader Uploader) error {
 		return err
 	}
 
-	post.MediaURLs = &mediaURLs
+	post.MediaURLs = mediaURLs
 	return nil
 }
 

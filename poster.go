@@ -45,7 +45,7 @@ func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	post, err := models.ParsePost(r.MultipartForm)
+	post, err := models.ParsePost(*r.MultipartForm)
 	if err != nil {
 		log.WithError(err).Warn("got bad post")
 		http.Error(w, badRequest, http.StatusBadRequest)

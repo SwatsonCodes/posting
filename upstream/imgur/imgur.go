@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strings"
@@ -22,7 +21,7 @@ type imgurResponse struct {
 }
 
 // TODO: DRY this out
-func (uploader Uploader) UploadMedia(media multipart.File) (imgurURL string, err error) {
+func (uploader Uploader) UploadMedia(media io.Reader) (imgurURL string, err error) {
 	var client http.Client
 	var bod imgurResponse
 
