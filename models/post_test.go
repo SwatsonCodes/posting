@@ -1,155 +1,56 @@
 package models
 
 import (
-	"net/url"
+	"mime/multipart"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 )
 
+func makeForm(fields map[string][]string) multipart.Form {
+	f := multipart.Form{
+		Value: fields,
+	}
+	// TODO: figure out a good way to add files
+	return f
+}
+
 func TestDecodePost(t *testing.T) {
 	testcases := []struct {
-		form      *url.Values
+		form      multipart.Form
 		shouldErr bool
-		id        string
 		body      string
-		mediaURLs []string
 	}{
 		{
-			&url.Values{
-				"SmsSid": []string{"abc123"},
-				"Body":   []string{"hello"},
-			},
+			makeForm(map[string][]string{"Body": []string{"hello"}}),
 			false,
-			"abc123",
 			"hello",
-			nil,
 		},
 		{
-			&url.Values{
-				"SmsSid":   []string{"abc123"},
-				"Body":     []string{"hello"},
-				"NumMedia": []string{"0"},
-			},
+			makeForm(map[string][]string{"Body": []string{"hello", "hi"}}),
 			false,
-			"abc123",
 			"hello",
-			nil,
 		},
 		{
-			&url.Values{
-				"SmsSid":    []string{"abc123"},
-				"Body":      []string{"hello"},
-				"NumMedia":  []string{"1"},
-				"MediaUrl0": []string{"http://www.example.com"},
-			},
-			false,
-			"abc123",
-			"hello",
-			[]string{"http://www.example.com"},
-		},
-		{
-			&url.Values{
-				"SmsSid":    []string{"abc123"},
-				"Body":      []string{"hello"},
-				"NumMedia":  []string{"3"},
-				"MediaUrl0": []string{"http://example.com/0"},
-				"MediaUrl1": []string{"http://example.com/1"},
-				"MediaUrl2": []string{"http://example.com/2"},
-			},
-			false,
-			"abc123",
-			"hello",
-			[]string{"http://example.com/0", "http://example.com/1", "http://example.com/2"},
-		},
-		{
-			&url.Values{
-				"SmsSid":    []string{"abc123"},
-				"Body":      []string{"hello"},
-				"NumMedia":  []string{"1"},
-				"MediaUrl0": []string{"http://example.com/0"},
-				"MediaUrl1": []string{"http://example.com/1"},
-			},
-			false,
-			"abc123",
-			"hello",
-			[]string{"http://example.com/0"},
-		},
-		{
-			&url.Values{
-				"SmsSid":    []string{"abc123"},
-				"Body":      []string{"hello"},
-				"NumMedia":  []string{"0"},
-				"MediaUrl0": []string{"http://example.com/0"},
-				"MediaUrl1": []string{"http://example.com/1"},
-			},
-			false,
-			"abc123",
-			"hello",
-			nil,
-		},
-		{
-			&url.Values{
-				"SmsSid":   []string{"abc123"},
-				"Body":     []string{"hello"},
-				"NumMedia": []string{"-1"},
-			},
-			false,
-			"abc123",
-			"hello",
-			nil,
-		},
-		{
-			&url.Values{
-				"Body": []string{"hello"},
-			},
+			makeForm(map[string][]string{"Body": []string{}}),
 			true,
 			"",
-			"",
-			nil,
 		},
 		{
-			&url.Values{
-				"SmsSid": []string{"abc123"},
-			},
-			false,
-			"abc123",
-			"",
-			nil,
-		},
-		{
-			&url.Values{
-				"SmsSid":   []string{"abc123"},
-				"Body":     []string{"hello"},
-				"NumMedia": []string{"one"},
-			},
+			makeForm(map[string][]string{"Body": []string{""}}),
 			true,
 			"",
-			"",
-			nil,
 		},
 		{
-			&url.Values{
-				"SmsSid":   []string{"abc123"},
-				"Body":     []string{"hello"},
-				"NumMedia": []string{"1"},
-			},
+			makeForm(map[string][]string{}),
 			true,
 			"",
-			"",
-			nil,
 		},
 		{
-			&url.Values{
-				"SmsSid":    []string{"abc123"},
-				"Body":      []string{"hello"},
-				"NumMedia":  []string{"2"},
-				"MediaUrl0": []string{"http://foo.bar"},
-			},
+			makeForm(map[string][]string{"bad": []string{"field"}}),
 			true,
 			"",
-			"",
-			nil,
 		},
 	}
 
@@ -162,8 +63,9 @@ func TestDecodePost(t *testing.T) {
 		}
 
 		assert.Nil(t, err)
-		assert.Equal(t, testcase.id, post.ID)
+		_, err = uuid.Parse(post.ID)
+		assert.NoError(t, err)
 		assert.Equal(t, testcase.body, post.Body)
-		assert.Equal(t, testcase.mediaURLs, post.MediaURLs)
+		assert.NotNil(t, post.CreatedAt)
 	}
 }

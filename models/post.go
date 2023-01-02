@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"io"
 	"mime/multipart"
 	"sync"
@@ -28,7 +29,7 @@ func ParsePost(form multipart.Form) (post *Post, err error) {
 		CreatedAt: time.Now(),
 		ID:        uuid.New().String(),
 	}
-	if bod, ok := form.Value["Body"]; ok {
+	if bod, ok := form.Value["Body"]; ok && len(bod) > 0 {
 		post.Body = bod[0]
 	}
 
@@ -44,6 +45,9 @@ func ParsePost(form multipart.Form) (post *Post, err error) {
 			media[i] = f
 		}
 		post.media = media
+	}
+	if post.Body == "" && len(post.media) == 0 {
+		return nil, errors.New("Post must contain a body or at least one media")
 	}
 	return
 }
