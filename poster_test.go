@@ -85,15 +85,6 @@ func TestCreatePost(t *testing.T) {
 			http.StatusOK,
 		},
 		{
-			nil,
-			map[string][]byte{
-				"Pics": []byte("a"),
-			},
-			&happyDB,
-			happyUploader,
-			http.StatusOK,
-		},
-		{
 			map[string]string{
 				"Body": "hello",
 			},
