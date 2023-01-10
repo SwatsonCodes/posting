@@ -16,7 +16,7 @@ const collectionName = "posts"                                      // TODO: mak
 const pageSize = 5
 
 func main() {
-	var imgurClientID, gcloudID, port string
+	var imgurClientID, gcloudID, username, password, port string
 	var ok bool
 	templatesPath := "templates"
 	log.SetFormatter(&log.JSONFormatter{DisableHTMLEscape: true})
@@ -27,6 +27,12 @@ func main() {
 	}
 	if gcloudID, ok = os.LookupEnv("GCLOUD_PROJECT_ID"); !ok {
 		log.Fatal("env var GCLOUD_PROJECT_ID not set")
+	}
+	if username, ok = os.LookupEnv("BASIC_AUTH_USERNAME"); !ok {
+		log.Fatal("env var BASIC_AUTH_USERNAME not set") // TODO: consider making auth optional
+	}
+	if password, ok = os.LookupEnv("BASIC_AUTH_PASSWORD"); !ok {
+		log.Fatal("env var BASIC_AUTH_PASSWORD not set")
 	}
 	if port, ok = os.LookupEnv("PORT"); !ok {
 		port = "8008"
@@ -39,10 +45,11 @@ func main() {
 	var pdb db.PostsDB = postsDB
 	poster, err := NewPoster(imgurClientID, templatesPath, pageSize, &pdb)
 	router := mux.NewRouter().StrictSlash(true)
+	auth := middleware.BasicAuthorizer{[]byte(username), []byte(password)}
 
 	router.Handle("/posts",
 		bodySizeLimit.LimitRequestBody( // guard against giant posts
-			middleware.AuthChecker(poster.IsRequestAuthorized).CheckAuth( // make sure posters are authorized
+			auth.BasicAuth( // make sure posters are authorized
 				http.HandlerFunc(poster.CreatePost)))).
 		Methods(http.MethodPost)
 		//Headers("Content-Type", "multipart/form-data")
@@ -51,6 +58,7 @@ func main() {
 		http.Redirect(w, r, "/posts", http.StatusMovedPermanently)
 	}).Methods(http.MethodGet)
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("static/")))
+	// TODO: put auth on static "new post" page
 
 	router.Use(middleware.LogRequest)
 	if env := os.Getenv("POSTER_ENV"); env == "DEV" {

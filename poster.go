@@ -100,14 +100,6 @@ func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// IsRequestAuthorized determines if an incoming request originates from Twilio by checking the request signature
-// it is intended to be configured as middleware by the server to protect the CreatePost endpoint (or any endpoint that should only be hit by Twilio)
-func (poster Poster) IsRequestAuthorized(r *http.Request) bool {
-	// TODO: basic auth
-	//return twilio.IsRequestSigned(r, poster.TwilioAuthToken) && r.PostForm.Get("From") == poster.AllowedSender
-	return true
-}
-
 // getPageNum determines which page number the requester wants using the "page" URL query param
 // if "page" is not present, not an integer, or < 0, this function returns 0
 func getPageNum(r *http.Request) (offset int) {
