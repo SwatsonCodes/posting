@@ -12,7 +12,7 @@ import (
 )
 
 // TODO: make these configurable
-const bodySizeLimit middleware.RequestBodyLimitBytes = 32 << 20 // TODO: how big is this?
+const bodySizeLimit middleware.RequestBodyLimitBytes = 256 << 20 // 256MiB
 const collectionName = "posts"
 const pageSize = 5
 
