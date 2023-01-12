@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"os"
@@ -32,8 +33,14 @@ func main() {
 	if username, ok = os.LookupEnv("BASIC_AUTH_USERNAME"); !ok {
 		log.Fatal("env var BASIC_AUTH_USERNAME not set") // TODO: consider making auth optional
 	}
-	if password, ok = os.LookupEnv("BASIC_AUTH_PASSWORD"); !ok {
+	if pw, ok := os.LookupEnv("BASIC_AUTH_PASSWORD"); !ok { // TODO: don't store password as env var!
 		log.Fatal("env var BASIC_AUTH_PASSWORD not set")
+	} else {
+		pwDecode, err := base64.StdEncoding.DecodeString(pw)
+		if err != nil {
+			log.Fatal(err)
+		}
+		password = string(pwDecode)
 	}
 	if port, ok = os.LookupEnv("PORT"); !ok {
 		port = "8008"
