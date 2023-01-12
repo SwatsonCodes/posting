@@ -2,13 +2,12 @@ package models
 
 import (
 	"errors"
-	"fmt"
-	"net/url"
-	"strconv"
+	"io"
+	"mime/multipart"
 	"sync"
 	"time"
 
-	"github.com/swatsoncodes/posting/upstream/imgur"
+	"github.com/google/uuid"
 )
 
 const createdAtFmt = "2 Jan 2006 15:04"
@@ -16,59 +15,64 @@ const createdAtFmt = "2 Jan 2006 15:04"
 type Post struct {
 	ID        string    `json:"post_id" firestore:"post_id"`
 	Body      string    `json:"body" firestore:"body"`
-	MediaURLs []string  `json:"media_urls,omitempty" firestore:"media_urls,omitempty"`
 	CreatedAt time.Time `json:"created_at" firestore:"created_at"`
+	MediaURLs []string  `json:"media_urls,omitempty" firestore:"media_urls,omitempty"`
+	media     []io.Reader
 }
 
-func ParsePost(form *url.Values) (post *Post, err error) {
-	var id, numMedia string
-	post = &Post{CreatedAt: time.Now()}
-	if id = form.Get("SmsSid"); id == "" {
-		return nil, errors.New("SmsSid field not present")
-	}
-	post.ID = id
+type Uploader interface {
+	UploadMedia(media io.Reader) (mediaURL string, err error)
+}
 
-	post.Body = form.Get("Body")
+func ParsePost(form multipart.Form) (post *Post, err error) {
+	post = &Post{
+		CreatedAt: time.Now(),
+		ID:        uuid.New().String(),
+	}
+	if bod, ok := form.Value["Body"]; ok && len(bod) > 0 {
+		post.Body = bod[0]
+	}
 
-	if numMedia = form.Get("NumMedia"); numMedia == "" {
-		return
-	}
-	nm, err := strconv.Atoi(numMedia)
-	if err != nil {
-		return nil, fmt.Errorf("NumMedia value '%s' could not be converted to integer", numMedia)
-	}
-	if nm <= 0 {
-		return
-	}
-	mediaURLs := make([]string, nm)
-	for i := 0; i < nm; i++ {
-		if mediaURL := form.Get(fmt.Sprintf("MediaUrl%d", i)); mediaURL != "" {
-			mediaURLs[i] = mediaURL
-			continue
+	if pics, ok := form.File["Pics"]; ok {
+		media := make([]io.Reader, len(pics))
+		for i, pic := range pics {
+			//TODO: validate media filetype
+			//TODO: validate media file size
+			f, err := pic.Open()
+			if err != nil {
+				return nil, err
+			}
+			media[i] = f
 		}
-		return nil, fmt.Errorf("NumMedia claims '%d' MediaURLs are present, but fewer were found", nm)
+		post.media = media
 	}
-	post.MediaURLs = mediaURLs
+	if post.Body == "" && len(post.media) == 0 {
+		return nil, errors.New("Post must contain a body or at least one media")
+	}
 	return
 }
 
-func (post *Post) RehostImagesOnImgur(uploader imgur.Uploader) error {
+func (post *Post) UploadMedia(uploader Uploader) error {
+	if post.media == nil {
+		return nil
+	}
+
 	var wg sync.WaitGroup
-	imgurURLs := make([]string, len(post.MediaURLs))
+	mediaURLs := make([]string, len(post.media))
 	done := make(chan bool, 0)
 	errors := make(chan error, 1)
 
-	for i, url := range post.MediaURLs {
+	for i, media := range post.media {
 		wg.Add(1)
-		go func(i int, url string) {
-			imgurURL, err := uploader.UploadImage(url)
+		go func(i int, m io.Reader) {
+			url, err := uploader.UploadMedia(m)
 			if err != nil {
 				errors <- err
 				return
 			}
-			imgurURLs[i] = imgurURL
+			mediaURLs[i] = url
 			wg.Done()
-		}(i, url)
+		}(i, media)
 	}
 	go func() {
 		wg.Wait()
@@ -82,9 +86,7 @@ func (post *Post) RehostImagesOnImgur(uploader imgur.Uploader) error {
 		return err
 	}
 
-	for i, url := range imgurURLs {
-		post.MediaURLs[i] = url
-	}
+	post.MediaURLs = mediaURLs
 	return nil
 }
 

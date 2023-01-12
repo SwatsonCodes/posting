@@ -10,55 +10,50 @@ import (
 	"github.com/swatsoncodes/posting/db"
 	"github.com/swatsoncodes/posting/models"
 	"github.com/swatsoncodes/posting/upstream/imgur"
-	"github.com/swatsoncodes/posting/upstream/twilio"
 )
 
 const postsTemplate string = "posts.html"
-const okay, badRequest, internalErr string = "👍", "🚮 bad post!", "🔥 internal error"
+const badRequest, internalErr string = "🚮 bad post!", "🔥 internal error"
 
 // Poster is the primary class of the blog.
 // It holds the necessary data to communicate with 3rd party APIs and render HTML templates.
 // A Poster creates new Posts by receiving incoming webook requests from Twilio and storing them in the DB.
 // It can display those Posts by retreiving them from the DB and rendering them in a nice HTML template
 type Poster struct {
-	AllowedSender   string // sole phone number allowed to create new posts
-	TwilioAuthToken string
-	ImgurUploader   imgur.Uploader // used for rehosting images on Imgur
-	DB              *db.PostsDB
-	PageSize        int                // number of posts to display on a single page
-	PostsTemplate   *template.Template // html template for rendering Posts
+	Uploader           models.Uploader // used for uploading media to external host
+	DB                 *db.PostsDB
+	PageSize           int                // number of posts to display on a single page
+	PostsTemplate      *template.Template // html template for rendering Posts
+	bodySizeLimitBytes int64
 }
 
 // NewPoster creates a new Poster
-func NewPoster(allowedSender, twilioAuthToken, imgurClientID, templatesPath string, pageSize int, postsDB *db.PostsDB) (*Poster, error) {
+func NewPoster(imgurClientID, templatesPath string, pageSize int, bodySizeLimit int64, postsDB *db.PostsDB) (*Poster, error) {
 	template, err := template.ParseFiles(filepath.Join(templatesPath, postsTemplate))
 	if err != nil {
 		return nil, err
 	}
-	return &Poster{allowedSender, twilioAuthToken, imgur.Uploader{ClientID: imgurClientID}, postsDB, pageSize, template}, nil
+	return &Poster{imgur.Uploader{ClientID: imgurClientID}, postsDB, pageSize, template, bodySizeLimit}, nil
 }
 
 // CreatePost creates a new Post by
-//  1) parsing it from an HTTP POST form sent via Twilio webhook
-//  2) rehosting the images associated with the Post (if any) on Imgur
-//  3) saving the Post data to the DB
-// The response it writes is forwarded to the sender's phone thanks to Twilio
+// TODO: update documentation
 func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
+	err := r.ParseMultipartForm(poster.bodySizeLimitBytes)
 	if err != nil {
 		log.WithError(err).Warn("unable to parse form body")
 		http.Error(w, badRequest, http.StatusBadRequest)
 		return
 	}
 
-	post, err := models.ParsePost(&r.PostForm)
+	post, err := models.ParsePost(*r.MultipartForm)
 	if err != nil {
 		log.WithError(err).Warn("got bad post")
 		http.Error(w, badRequest, http.StatusBadRequest)
 		return
 	}
 
-	if err := post.RehostImagesOnImgur(poster.ImgurUploader); err != nil {
+	if err := post.UploadMedia(poster.Uploader); err != nil {
 		log.WithError(err).Error("failed to upload images to imgur")
 		http.Error(w, internalErr, http.StatusInternalServerError)
 		return
@@ -70,9 +65,7 @@ func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/plain")
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte(okay))
+	poster.GetPosts(w, r)
 }
 
 // GetPosts retrieves Posts from the DB and renders them using the HTML template.
@@ -106,12 +99,6 @@ func (poster Poster) GetPosts(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, internalErr, http.StatusInternalServerError)
 		return
 	}
-}
-
-// IsRequestAuthorized determines if an incoming request originates from Twilio by checking the request signature
-// it is intended to be configured as middleware by the server to protect the CreatePost endpoint (or any endpoint that should only be hit by Twilio)
-func (poster Poster) IsRequestAuthorized(r *http.Request) bool {
-	return twilio.IsRequestSigned(r, poster.TwilioAuthToken) && r.PostForm.Get("From") == poster.AllowedSender
 }
 
 // getPageNum determines which page number the requester wants using the "page" URL query param

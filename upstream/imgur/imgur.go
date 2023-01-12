@@ -12,6 +12,7 @@ import (
 )
 
 const maxBodySizeBytes = 2 * 1024 // 2KiB
+const imgurApiUrl = "https://api.imgur.com/3/image"
 
 type Uploader struct {
 	ClientID string
@@ -20,19 +21,16 @@ type imgurResponse struct {
 	Data struct{ Link string }
 }
 
-func (uploader Uploader) UploadImage(currentURL string) (imgurURL string, err error) {
+func (uploader Uploader) postToImgur(media io.Reader, contentType string) (imgurURL string, err error) {
 	var client http.Client
 	var bod imgurResponse
 
-	req, err := http.NewRequest("POST",
-		"https://api.imgur.com/3/image",
-		strings.NewReader(url.Values{"image": {currentURL}}.Encode()),
-	)
+	req, err := http.NewRequest("POST", imgurApiUrl, media)
 	if err != nil {
 		return
 	}
 	req.Header.Add("Authorization", "Client-ID "+uploader.ClientID)
-	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Add("Content-Type", contentType)
 	resp, err := client.Do(req)
 	if err != nil {
 		return
@@ -50,4 +48,12 @@ func (uploader Uploader) UploadImage(currentURL string) (imgurURL string, err er
 	}
 
 	return bod.Data.Link, nil
+}
+
+func (uploader Uploader) UploadMedia(media io.Reader) (imgurURL string, err error) {
+	return uploader.postToImgur(media, "multipart/form-data")
+}
+
+func (uploader Uploader) RehostImage(currentURL string) (imgurURL string, err error) {
+	return uploader.postToImgur(strings.NewReader(url.Values{"image": {currentURL}}.Encode()), "application/x-www-form-urlencoded")
 }

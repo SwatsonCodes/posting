@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"os"
@@ -11,28 +12,35 @@ import (
 	"github.com/swatsoncodes/posting/middleware"
 )
 
-const bodySizeLimit middleware.RequestBodyLimitBytes = 2 * 1024 // 2KiB
-const collectionName = "posts"                                  // TODO: make this configurable
+// TODO: make these configurable
+const bodySizeLimit middleware.RequestBodyLimitBytes = 256 << 20 // 256MiB
+const collectionName = "posts"
 const pageSize = 5
 
 func main() {
-	var sender, twilioToken, imgurClientID, gcloudID, port string
+	var imgurClientID, gcloudID, username, password, port string
 	var ok bool
 	templatesPath := "templates"
 	log.SetFormatter(&log.JSONFormatter{DisableHTMLEscape: true})
 	log.Info("hello")
 
-	if sender, ok = os.LookupEnv("ALLOWED_SENDER"); !ok {
-		log.Fatal("env var ALLOWED_SENDER not set")
-	}
-	if twilioToken, ok = os.LookupEnv("TWILIO_AUTH_TOKEN"); !ok {
-		log.Fatal("env var TWILIO_AUTH_TOKEN not set")
-	}
 	if imgurClientID, ok = os.LookupEnv("IMGUR_CLIENT_ID"); !ok {
 		log.Fatal("env var IMGUR_CLIENT_ID not set")
 	}
 	if gcloudID, ok = os.LookupEnv("GCLOUD_PROJECT_ID"); !ok {
 		log.Fatal("env var GCLOUD_PROJECT_ID not set")
+	}
+	if username, ok = os.LookupEnv("BASIC_AUTH_USERNAME"); !ok {
+		log.Fatal("env var BASIC_AUTH_USERNAME not set") // TODO: consider making auth optional
+	}
+	if pw, ok := os.LookupEnv("BASIC_AUTH_PASSWORD"); !ok { // TODO: don't store password as env var!
+		log.Fatal("env var BASIC_AUTH_PASSWORD not set")
+	} else {
+		pwDecode, err := base64.StdEncoding.DecodeString(pw)
+		if err != nil {
+			log.Fatal(err)
+		}
+		password = string(pwDecode)
 	}
 	if port, ok = os.LookupEnv("PORT"); !ok {
 		port = "8008"
@@ -43,19 +51,25 @@ func main() {
 		log.WithError(err).Fatal("failed to initialize db")
 	}
 	var pdb db.PostsDB = postsDB
-	poster, err := NewPoster(sender, twilioToken, imgurClientID, templatesPath, pageSize, &pdb)
+	poster, err := NewPoster(imgurClientID, templatesPath, pageSize, int64(bodySizeLimit), &pdb)
 	router := mux.NewRouter().StrictSlash(true)
+	auth := middleware.BasicAuthorizer{[]byte(username), []byte(password)}
 
 	router.Handle("/posts",
 		bodySizeLimit.LimitRequestBody( // guard against giant posts
-			middleware.AuthChecker(poster.IsRequestAuthorized).CheckAuth( // make sure posters are authorized
+			auth.BasicAuth( // make sure posters are authorized
 				http.HandlerFunc(poster.CreatePost)))).
-		Methods(http.MethodPost).
-		Headers("Content-Type", "application/x-www-form-urlencoded")
+		Methods(http.MethodPost)
 	router.HandleFunc("/posts", poster.GetPosts).Methods(http.MethodGet)
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/posts", http.StatusMovedPermanently)
 	}).Methods(http.MethodGet)
+	router.Handle("/new",
+		auth.BasicAuth( // require auth on new Post upload page
+			func(w http.ResponseWriter, r *http.Request) {
+				http.ServeFile(w, r, "static/new")
+			}),
+	)
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("static/")))
 
 	router.Use(middleware.LogRequest)
