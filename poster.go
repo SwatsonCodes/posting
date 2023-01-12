@@ -20,25 +20,26 @@ const badRequest, internalErr string = "🚮 bad post!", "🔥 internal error"
 // A Poster creates new Posts by receiving incoming webook requests from Twilio and storing them in the DB.
 // It can display those Posts by retreiving them from the DB and rendering them in a nice HTML template
 type Poster struct {
-	Uploader      models.Uploader // used for uploading media to external host
-	DB            *db.PostsDB
-	PageSize      int                // number of posts to display on a single page
-	PostsTemplate *template.Template // html template for rendering Posts
+	Uploader           models.Uploader // used for uploading media to external host
+	DB                 *db.PostsDB
+	PageSize           int                // number of posts to display on a single page
+	PostsTemplate      *template.Template // html template for rendering Posts
+	bodySizeLimitBytes int64
 }
 
 // NewPoster creates a new Poster
-func NewPoster(imgurClientID, templatesPath string, pageSize int, postsDB *db.PostsDB) (*Poster, error) {
+func NewPoster(imgurClientID, templatesPath string, pageSize int, bodySizeLimit int64, postsDB *db.PostsDB) (*Poster, error) {
 	template, err := template.ParseFiles(filepath.Join(templatesPath, postsTemplate))
 	if err != nil {
 		return nil, err
 	}
-	return &Poster{imgur.Uploader{ClientID: imgurClientID}, postsDB, pageSize, template}, nil
+	return &Poster{imgur.Uploader{ClientID: imgurClientID}, postsDB, pageSize, template, bodySizeLimit}, nil
 }
 
 // CreatePost creates a new Post by
 // TODO: update documentation
 func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseMultipartForm(32 << 20) // TODO don't hardcode this
+	err := r.ParseMultipartForm(poster.bodySizeLimitBytes)
 	if err != nil {
 		log.WithError(err).Warn("unable to parse form body")
 		http.Error(w, badRequest, http.StatusBadRequest)

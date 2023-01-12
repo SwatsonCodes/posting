@@ -11,8 +11,9 @@ import (
 	"github.com/swatsoncodes/posting/middleware"
 )
 
-const bodySizeLimit middleware.RequestBodyLimitBytes = 32<<20 + 512 // TODO: how big is this?
-const collectionName = "posts"                                      // TODO: make this configurable
+// TODO: make these configurable
+const bodySizeLimit middleware.RequestBodyLimitBytes = 32 << 20 // TODO: how big is this?
+const collectionName = "posts"
 const pageSize = 5
 
 func main() {
@@ -43,7 +44,7 @@ func main() {
 		log.WithError(err).Fatal("failed to initialize db")
 	}
 	var pdb db.PostsDB = postsDB
-	poster, err := NewPoster(imgurClientID, templatesPath, pageSize, &pdb)
+	poster, err := NewPoster(imgurClientID, templatesPath, pageSize, int64(bodySizeLimit), &pdb)
 	router := mux.NewRouter().StrictSlash(true)
 	auth := middleware.BasicAuthorizer{[]byte(username), []byte(password)}
 
@@ -52,13 +53,17 @@ func main() {
 			auth.BasicAuth( // make sure posters are authorized
 				http.HandlerFunc(poster.CreatePost)))).
 		Methods(http.MethodPost)
-		//Headers("Content-Type", "multipart/form-data")
 	router.HandleFunc("/posts", poster.GetPosts).Methods(http.MethodGet)
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/posts", http.StatusMovedPermanently)
 	}).Methods(http.MethodGet)
+	router.Handle("/new",
+		auth.BasicAuth( // require auth on new Post upload page
+			func(w http.ResponseWriter, r *http.Request) {
+				http.ServeFile(w, r, "static/new")
+			}),
+	)
 	router.PathPrefix("/").Handler(http.FileServer(http.Dir("static/")))
-	// TODO: put auth on static "new post" page
 
 	router.Use(middleware.LogRequest)
 	if env := os.Getenv("POSTER_ENV"); env == "DEV" {
