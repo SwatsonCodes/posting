@@ -1,3 +1,4 @@
+// Package models provides types for modeling Posts
 package models
 
 import (
@@ -12,11 +13,13 @@ import (
 
 const createdAtFmt = "2 Jan 2006 15:04"
 
+// a Post consists primarily of a text blurb and/or one or more media (i.e. pictures).
+// Note that the MediaURLs field is not populated until UploadMedia() is called.
 type Post struct {
-	ID        string    `json:"post_id" firestore:"post_id"`
-	Body      string    `json:"body" firestore:"body"`
-	CreatedAt time.Time `json:"created_at" firestore:"created_at"`
-	MediaURLs []string  `json:"media_urls,omitempty" firestore:"media_urls,omitempty"`
+	ID        string    `json:"post_id" firestore:"post_id"`                           // unique ID
+	Body      string    `json:"body" firestore:"body"`                                 // text blurb (optional)
+	CreatedAt time.Time `json:"created_at" firestore:"created_at"`                     // time Post was created
+	MediaURLs []string  `json:"media_urls,omitempty" firestore:"media_urls,omitempty"` // colletion of HTTP URLs to associated media (optional).
 	media     []io.Reader
 }
 
