@@ -13,7 +13,7 @@ import (
 
 const createdAtFmt = "2 Jan 2006 15:04"
 
-// a Post consists primarily of a text blurb and/or one or more media (i.e. pictures).
+// A Post consists primarily of a text blurb and/or one or more media (i.e. pictures).
 // Note that the MediaURLs field is not populated until UploadMedia() is called.
 type Post struct {
 	ID        string    `json:"post_id" firestore:"post_id"`                           // unique ID
@@ -23,10 +23,12 @@ type Post struct {
 	media     []io.Reader
 }
 
+// An Uploader uploads media (i.e. an image) to an external host and returns the URL where the media can be accessed.
 type Uploader interface {
 	UploadMedia(media io.Reader) (mediaURL string, err error)
 }
 
+// ParsePost attempts to parse incoming post from an HTTP form and returns the resultant Post object
 func ParsePost(form multipart.Form) (post *Post, err error) {
 	post = &Post{
 		CreatedAt: time.Now(),
@@ -55,6 +57,9 @@ func ParsePost(form multipart.Form) (post *Post, err error) {
 	return
 }
 
+// UploadMedia uploads the media associated with a Post (if any) to an external host by invoking the given Uploader.
+// The resultant URLs where the media can be accessed are stored in the Post.MediaURLs field.
+// This method invokes the Uploader asynchronously on each piece of media associated with the Post, and blocks until all uploads are complete.
 func (post *Post) UploadMedia(uploader Uploader) error {
 	if post.media == nil {
 		return nil
@@ -93,6 +98,7 @@ func (post *Post) UploadMedia(uploader Uploader) error {
 	return nil
 }
 
+// FmtCreatedAt returns the Post's CreatedAt field as a human-readable string.
 func (post *Post) FmtCreatedAt() string {
 	return post.CreatedAt.Format(createdAtFmt)
 }
