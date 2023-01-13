@@ -1,3 +1,4 @@
+// Posting is a simple microblogging web framework.
 package main
 
 import (
