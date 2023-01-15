@@ -58,7 +58,7 @@ func main() {
 
 	router.Handle("/posts",
 		bodySizeLimit.LimitRequestBody( // guard against giant posts
-			auth.BasicAuth( // make sure posters are authorized
+			auth.DoBasicAuth( // make sure posters are authorized
 				http.HandlerFunc(poster.CreatePost)))).
 		Methods(http.MethodPost)
 	router.HandleFunc("/posts", poster.GetPosts).Methods(http.MethodGet)
