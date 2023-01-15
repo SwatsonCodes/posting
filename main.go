@@ -66,7 +66,7 @@ func main() {
 		http.Redirect(w, r, "/posts", http.StatusMovedPermanently)
 	}).Methods(http.MethodGet)
 	router.Handle("/new",
-		auth.BasicAuth( // require auth on new Post upload page
+		auth.DoBasicAuth( // require auth on new Post upload page
 			func(w http.ResponseWriter, r *http.Request) {
 				http.ServeFile(w, r, "static/new")
 			}),
