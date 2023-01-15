@@ -1,3 +1,4 @@
+// Package db provides tooling for interacting with a database that stores Posts.
 package db
 
 import (
@@ -13,6 +14,7 @@ type firestoreClient struct {
 	posts *firestore.CollectionRef
 }
 
+// NewFirestoreClient returns a reference to a Firestore DB client
 func NewFirestoreClient(projectID, postsCollectionName string) (client *firestoreClient, err error) {
 	ctx := context.Background()
 	fc, err := firestore.NewClient(ctx, projectID)
@@ -22,11 +24,13 @@ func NewFirestoreClient(projectID, postsCollectionName string) (client *firestor
 	return &firestoreClient{ctx, fc.Collection(postsCollectionName)}, nil
 }
 
+// PutPost adds a new post to the DB
 func (client *firestoreClient) PutPost(post models.Post) (err error) {
 	_, err = client.posts.Doc(post.ID).Create(client.ctx, post)
 	return
 }
 
+// GetPosts retrieves Posts from the DB, starting from the given offset and up to the given limit.
 func (client *firestoreClient) GetPosts(offset, limit int) (posts *[]models.Post, isMore bool, err error) {
 	var poasts []models.Post
 	isMore = true
