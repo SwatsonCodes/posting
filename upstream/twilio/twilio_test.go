@@ -21,9 +21,9 @@ func TestGetExpectedTwilioSignature(t *testing.T) {
 		"To":      {"+18005551212"},
 	}
 
-	assert.Equal(t, expectedSignature, GetExpectedTwilioSignature(_url, authToken, postForm))
+	assert.Equal(t, expectedSignature, getExpectedTwilioSignature(_url, authToken, postForm))
 	postForm["New"] = []string{"data"}
-	assert.NotEqual(t, expectedSignature, GetExpectedTwilioSignature(_url, authToken, postForm))
+	assert.NotEqual(t, expectedSignature, getExpectedTwilioSignature(_url, authToken, postForm))
 }
 
 func TestIsRequestSigned(t *testing.T) {
