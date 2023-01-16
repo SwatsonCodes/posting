@@ -1,3 +1,4 @@
+// Posting is a simple microblogging web framework.
 package main
 
 import (
@@ -57,7 +58,7 @@ func main() {
 
 	router.Handle("/posts",
 		bodySizeLimit.LimitRequestBody( // guard against giant posts
-			auth.BasicAuth( // make sure posters are authorized
+			auth.DoBasicAuth( // make sure posters are authorized
 				http.HandlerFunc(poster.CreatePost)))).
 		Methods(http.MethodPost)
 	router.HandleFunc("/posts", poster.GetPosts).Methods(http.MethodGet)
@@ -65,7 +66,7 @@ func main() {
 		http.Redirect(w, r, "/posts", http.StatusMovedPermanently)
 	}).Methods(http.MethodGet)
 	router.Handle("/new",
-		auth.BasicAuth( // require auth on new Post upload page
+		auth.DoBasicAuth( // require auth on new Post upload page
 			func(w http.ResponseWriter, r *http.Request) {
 				http.ServeFile(w, r, "static/new")
 			}),

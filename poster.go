@@ -17,14 +17,14 @@ const badRequest, internalErr string = "🚮 bad post!", "🔥 internal error"
 
 // Poster is the primary class of the blog.
 // It holds the necessary data to communicate with 3rd party APIs and render HTML templates.
-// A Poster creates new Posts by receiving incoming webook requests from Twilio and storing them in the DB.
+// A Poster creates new Posts by receiving them over HTTP and storing them in the DB.
 // It can display those Posts by retreiving them from the DB and rendering them in a nice HTML template
 type Poster struct {
-	Uploader           models.Uploader // used for uploading media to external host
-	DB                 *db.PostsDB
-	PageSize           int                // number of posts to display on a single page
+	Uploader           models.Uploader    // used for uploading media to external host
+	DB                 *db.PostsDB        // DB connection for storing/retrieving Posts
+	PageSize           int                // number of Posts to display on a single page
 	PostsTemplate      *template.Template // html template for rendering Posts
-	bodySizeLimitBytes int64
+	bodySizeLimitBytes int64              // upper limit for incoming request bodies, in bytes
 }
 
 // NewPoster creates a new Poster
@@ -36,8 +36,8 @@ func NewPoster(imgurClientID, templatesPath string, pageSize int, bodySizeLimit 
 	return &Poster{imgur.Uploader{ClientID: imgurClientID}, postsDB, pageSize, template, bodySizeLimit}, nil
 }
 
-// CreatePost creates a new Post by
-// TODO: update documentation
+// CreatePost creates a new Post by parsing incoming HTTP request bodies and storing them in the DB.
+// It will upload any attached media to a separate host.
 func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseMultipartForm(poster.bodySizeLimitBytes)
 	if err != nil {
@@ -54,7 +54,7 @@ func (poster Poster) CreatePost(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := post.UploadMedia(poster.Uploader); err != nil {
-		log.WithError(err).Error("failed to upload images to imgur")
+		log.WithError(err).Error("failed to upload images to host")
 		http.Error(w, internalErr, http.StatusInternalServerError)
 		return
 	}

@@ -1,3 +1,4 @@
+// Package middleware contains HTTP middleware
 package middleware
 
 import (
@@ -6,12 +7,15 @@ import (
 	"net/http"
 )
 
+// BasicAuthorizer holds a username and password necessary for doing HTTP Basic Auth.
 type BasicAuthorizer struct {
 	Username, Password []byte
 }
 
+// DoBasicAuth checks that a request presents a valid username and password using basic auth.
+// If not, it writes an HTTP unauthorized response.
 // inspired by https://www.alexedwards.net/blog/basic-authentication-in-go
-func (ba BasicAuthorizer) BasicAuth(next http.HandlerFunc) http.HandlerFunc {
+func (ba BasicAuthorizer) DoBasicAuth(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Extract the username and password from the request
 		// Authorization header. If no Authentication header is present

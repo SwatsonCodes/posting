@@ -1,3 +1,4 @@
+// Package models provides types for modeling Posts
 package models
 
 import (
@@ -12,18 +13,22 @@ import (
 
 const createdAtFmt = "2 Jan 2006 15:04"
 
+// A Post consists primarily of a text blurb and/or one or more media (i.e. pictures).
+// Note that the MediaURLs field is not populated until UploadMedia() is called.
 type Post struct {
-	ID        string    `json:"post_id" firestore:"post_id"`
-	Body      string    `json:"body" firestore:"body"`
-	CreatedAt time.Time `json:"created_at" firestore:"created_at"`
-	MediaURLs []string  `json:"media_urls,omitempty" firestore:"media_urls,omitempty"`
+	ID        string    `json:"post_id" firestore:"post_id"`                           // unique ID
+	Body      string    `json:"body" firestore:"body"`                                 // text blurb (optional)
+	CreatedAt time.Time `json:"created_at" firestore:"created_at"`                     // time Post was created
+	MediaURLs []string  `json:"media_urls,omitempty" firestore:"media_urls,omitempty"` // colletion of HTTP URLs to associated media (optional).
 	media     []io.Reader
 }
 
+// An Uploader uploads media (i.e. an image) to an external host and returns the URL where the media can be accessed.
 type Uploader interface {
 	UploadMedia(media io.Reader) (mediaURL string, err error)
 }
 
+// ParsePost attempts to parse incoming post from an HTTP form and returns the resultant Post object
 func ParsePost(form multipart.Form) (post *Post, err error) {
 	post = &Post{
 		CreatedAt: time.Now(),
@@ -52,6 +57,9 @@ func ParsePost(form multipart.Form) (post *Post, err error) {
 	return
 }
 
+// UploadMedia uploads the media associated with a Post (if any) to an external host by invoking the given Uploader.
+// The resultant URLs where the media can be accessed are stored in the Post.MediaURLs field.
+// This method invokes the Uploader asynchronously on each piece of media associated with the Post, and blocks until all uploads are complete.
 func (post *Post) UploadMedia(uploader Uploader) error {
 	if post.media == nil {
 		return nil
@@ -90,6 +98,7 @@ func (post *Post) UploadMedia(uploader Uploader) error {
 	return nil
 }
 
+// FmtCreatedAt returns the Post's CreatedAt field as a human-readable string.
 func (post *Post) FmtCreatedAt() string {
 	return post.CreatedAt.Format(createdAtFmt)
 }

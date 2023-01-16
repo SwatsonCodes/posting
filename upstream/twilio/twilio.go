@@ -1,3 +1,5 @@
+// Package twilio provides tooling for interacting with the Twilio API.
+// TODO: this package is deprecated and currently unused. Either delete it or make use of it again.
 package twilio
 
 import (
@@ -13,7 +15,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func GetExpectedTwilioSignature(url, authToken string, postForm url.Values) (expectedTwilioSignature string) {
+func getExpectedTwilioSignature(url, authToken string, postForm url.Values) (expectedTwilioSignature string) {
 	var i int
 	var buffer bytes.Buffer
 	var postFormLen = len(postForm)
@@ -38,6 +40,9 @@ func GetExpectedTwilioSignature(url, authToken string, postForm url.Values) (exp
 	return base64.StdEncoding.EncodeToString(mac.Sum(nil))
 }
 
+// IsRequestSigned calculates the expected Twilio signature of a request and checks it against the one contained in
+// the 'Twilio Signature' header. Returns true if they match, false otherwise.
+// Useful for determining if a request originated from Twilio or is a spoof attempt.
 func IsRequestSigned(r *http.Request, authToken string) bool {
 	err := r.ParseForm()
 	if err != nil {
@@ -46,7 +51,7 @@ func IsRequestSigned(r *http.Request, authToken string) bool {
 	}
 
 	if sig := r.Header.Get("X-Twilio-Signature"); sig != "" {
-		if sig != GetExpectedTwilioSignature(
+		if sig != getExpectedTwilioSignature(
 			getClientURL(r),
 			authToken,
 			r.PostForm,

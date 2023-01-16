@@ -1,6 +1,7 @@
 */.terraform/*
 */terraform.*
 main
-nice_lambda.zip
 gcloud_poster_creds.json
 request_bods.log
+app.yaml
+dev_vars.env

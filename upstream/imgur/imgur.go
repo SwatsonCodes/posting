@@ -1,8 +1,8 @@
+// Package imgur contains tooling for interacting with the Imgur API
 package imgur
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -12,8 +12,9 @@ import (
 )
 
 const maxBodySizeBytes = 2 * 1024 // 2KiB
-const imgurApiUrl = "https://api.imgur.com/3/image"
+const imgurAPIURL = "https://api.imgur.com/3/image"
 
+// Uploader is a simple struct containing the info necessary to communicate with the imgur API
 type Uploader struct {
 	ClientID string
 }
@@ -25,7 +26,7 @@ func (uploader Uploader) postToImgur(media io.Reader, contentType string) (imgur
 	var client http.Client
 	var bod imgurResponse
 
-	req, err := http.NewRequest("POST", imgurApiUrl, media)
+	req, err := http.NewRequest("POST", imgurAPIURL, media)
 	if err != nil {
 		return
 	}
@@ -36,7 +37,7 @@ func (uploader Uploader) postToImgur(media io.Reader, contentType string) (imgur
 		return
 	}
 	if resp.StatusCode != 200 {
-		return "", errors.New(fmt.Sprintf("non-200 status code received from imgur: %d", resp.StatusCode))
+		return "", fmt.Errorf("non-200 status code received from imgur: %d", resp.StatusCode)
 	}
 
 	body, err := ioutil.ReadAll(io.LimitReader(resp.Body, maxBodySizeBytes))
@@ -50,10 +51,14 @@ func (uploader Uploader) postToImgur(media io.Reader, contentType string) (imgur
 	return bod.Data.Link, nil
 }
 
+// UploadMedia attempts to upload the given media to the imgur API.
+// It returns the URL where the media can be found, or an error.
 func (uploader Uploader) UploadMedia(media io.Reader) (imgurURL string, err error) {
 	return uploader.postToImgur(media, "multipart/form-data")
 }
 
+// RehostImage takes a URL pointing to an image and attempts to rehost that image on imgur via the API.
+// It returns the URL where the image can be found, or an error.
 func (uploader Uploader) RehostImage(currentURL string) (imgurURL string, err error) {
 	return uploader.postToImgur(strings.NewReader(url.Values{"image": {currentURL}}.Encode()), "application/x-www-form-urlencoded")
 }
