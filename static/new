@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html>
+<head>
+<link rel="stylesheet" href="https://newcss.net/lite.css">
+</head>
 <body>
 
 <h2>New Post</h2>
 
 <form action="/posts" method="post" enctype="multipart/form-data">
-  <label for="Body">Body</label><br>
-  <input type="text" id="Body" name="Body"><br>
-  <input type="file" id="Pics" name="Pics" multiple><br><br>
+  <input type="text" id="Body" name="Body" placeholder="body"><br>
+  <label for="Pics">add photos:</label>
+  <input type="file" id="Pics" name="Pics" placeholder=" multiple><br><br>
   <input type="submit" value="POST">
 </form>
 
