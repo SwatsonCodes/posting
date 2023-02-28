@@ -10,7 +10,7 @@
 <form action="/posts" method="post" enctype="multipart/form-data">
   <input type="text" id="Body" name="Body" placeholder="body"><br>
   <label for="Pics">add photos:</label>
-  <input type="file" id="Pics" name="Pics" placeholder=" multiple><br><br>
+  <input type="file" id="Pics" name="Pics" multiple><br><br>
   <input type="submit" value="POST">
 </form>
 
